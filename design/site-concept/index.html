@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сборщик интерфейса Aion — концепт сайта</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  /* Токены — те же, что в программе (src/ui/tokens.css) */
+  :root {
+    --bg-base: #0b0b0c;
+    --bg-surface: #151516;
+    --bg-deep: #1d1d1f;
+    --bg-raised: #222224;
+    --bg-hover: #29292b;
+    --text: #d6d6d9;
+    --text-strong: #f5f5f6;
+    --text-muted: #8f8f95;
+    --text-faint: #5d5d63;
+    --accent: #ededee;
+    --accent-ink: #0b0b0c;
+    --hot: linear-gradient(90deg, #ff5a3c 0%, #e0457b 55%, #9b5cff 100%);
+    --yellow: #ffad5c;
+    --green: #4fd18b;
+    --stroke: rgba(255, 255, 255, 0.06);
+    --stroke-strong: rgba(255, 255, 255, 0.1);
+    --radius: 14px;
+    --radius-lg: 20px;
+    --font: 'Onest', 'Segoe UI', Arial, sans-serif;
+    --mono: 'JetBrains Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg-base);
+    color: var(--text);
+    font: 400 17px/1.55 var(--font);
+    -webkit-font-smoothing: antialiased;
+  }
+  img { display: block; max-width: 100%; height: auto; }
+  a { color: inherit; }
+  .wrap { padding: 0 clamp(20px, 4vw, 72px); }
+  h1, h2, h3 { color: var(--text-strong); margin: 0; letter-spacing: -0.02em; }
+  h2 { font-size: clamp(36px, 5vw, 64px); line-height: 1.04; font-weight: 700; }
+  h3 { font-size: 20px; line-height: 1.3; font-weight: 600; letter-spacing: -0.01em; }
+  p { margin: 0; }
+  .lead { font-size: clamp(18px, 1.6vw, 21px); line-height: 1.5; color: var(--text-muted); max-width: 640px; }
+  .lead b { color: var(--text-strong); font-weight: 500; }
+  code, .mono { font-family: var(--mono); font-size: 0.86em; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    height: 52px; padding: 0 28px;
+    border-radius: 14px; border: 0;
+    font: 600 16px/1 var(--font); text-decoration: none; cursor: pointer;
+    transition: background-color .15s, transform .15s;
+  }
+  .btn--main { background: var(--accent); color: var(--accent-ink); }
+  .btn--main:hover { background: #fff; transform: translateY(-1px); }
+  .btn--ghost { background: transparent; color: var(--text); box-shadow: inset 0 0 0 1px var(--stroke-strong); }
+  .btn--ghost:hover { background: var(--bg-raised); }
+
+  /* ——— шапка ——— */
+  .top {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--bg-base);
+    border-bottom: 1px solid var(--stroke);
+  }
+  .top .wrap { display: flex; align-items: center; gap: 40px; height: 68px; }
+  .logo { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--text-strong); font-weight: 600; font-size: 16px; }
+  .logo i { width: 22px; height: 22px; border-radius: 7px; background: var(--hot); }
+  .top nav { display: flex; gap: 28px; margin-left: auto; }
+  .top nav a { text-decoration: none; color: var(--text-muted); font-size: 15px; }
+  .top nav a:hover { color: var(--text-strong); }
+  .top .btn { height: 40px; padding: 0 18px; font-size: 14px; border-radius: 10px; }
+
+  /* ——— первый экран ——— */
+  .hero { padding: 112px 0 0; overflow: hidden; }
+  .hero__text { display: grid; grid-template-columns: 1.25fr 1fr; gap: 64px; align-items: end; }
+  .hero h1 { font-size: clamp(48px, 7.4vw, 104px); line-height: 0.96; font-weight: 800; letter-spacing: -0.035em; }
+  .hero__side { display: grid; gap: 32px; padding-bottom: 12px; }
+  .hero__cta { display: flex; gap: 12px; flex-wrap: wrap; }
+  .hero__note { font-size: 14px; color: var(--text-faint); }
+  .hero__stage { margin-top: 80px; perspective: 1600px; }
+  .window {
+    border-radius: 16px; overflow: hidden;
+    box-shadow: 0 0 0 1px var(--stroke-strong), 0 40px 120px rgba(0, 0, 0, .6);
+    transform-origin: 50% 0;
+    will-change: transform;
+  }
+
+  /* ——— подписной блок: цифры урона ——— */
+  .dmg { height: 260vh; position: relative; margin-top: 160px; }
+  .dmg__pin { position: sticky; top: 0; height: 100vh; display: flex; align-items: center; }
+  .dmg__grid { display: grid; grid-template-columns: 1fr 1.1fr; gap: 64px; align-items: center; width: 100%; }
+  .dmg__value { font: 800 clamp(96px, 14vw, 200px)/0.9 var(--font); letter-spacing: -0.05em; color: var(--text-strong); font-variant-numeric: tabular-nums; }
+  .dmg__value small { font-size: 0.4em; color: var(--text-faint); font-weight: 600; letter-spacing: -0.02em; }
+  .dmg__bar { height: 6px; border-radius: 3px; background: var(--bg-raised); margin: 28px 0 32px; overflow: hidden; max-width: 420px; }
+  .dmg__bar span { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 3px; }
+  .dmg__scene {
+    height: min(70vh, 620px); border-radius: var(--radius-lg);
+    background: var(--bg-surface);
+    box-shadow: inset 0 0 0 1px var(--stroke);
+    display: grid; place-items: center; overflow: hidden;
+  }
+  .dmg__scene img { width: 90%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.5); transform-origin: 50% 50%; will-change: transform; }
+  .dmg__facts { display: grid; gap: 10px; margin-top: 8px; color: var(--text-muted); font-size: 15px; }
+  .dmg__facts span { color: var(--text-strong); }
+
+  /* ——— секции ——— */
+  section.block { padding: 160px 0; }
+  .block__head { display: grid; grid-template-columns: 1.4fr 1fr; gap: 64px; align-items: end; margin-bottom: 72px; }
+
+  /* иконки умений */
+  .ranks { display: grid; grid-template-columns: auto 1fr; gap: 56px; align-items: center; background: var(--bg-surface); border-radius: var(--radius-lg); padding: 56px; }
+  .ranks__src { display: grid; gap: 14px; justify-items: center; }
+  .ranks__src img { width: 160px; height: 160px; border-radius: 12px; image-rendering: pixelated; box-shadow: 0 0 0 1px var(--stroke-strong); }
+  .ranks__src span { font-size: 13px; color: var(--text-faint); }
+  .ranks__out { display: grid; gap: 24px; }
+  .ranks__row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+  .ranks__cell { display: grid; gap: 8px; justify-items: center; }
+  .ranks__cell img { width: 100%; max-width: 96px; aspect-ratio: 1; border-radius: 8px; image-rendering: pixelated; }
+  .ranks__cell em { font: 600 13px/1 var(--mono); font-style: normal; color: var(--text-muted); }
+  .ranks__toggle { display: flex; gap: 4px; background: var(--bg-deep); padding: 4px; border-radius: 12px; width: max-content; }
+  .ranks__toggle button { height: 36px; padding: 0 16px; border: 0; border-radius: 9px; background: transparent; color: var(--text-muted); font: 500 14px var(--font); cursor: pointer; }
+  .ranks__toggle button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  .ranks__caption { font-size: 14px; color: var(--text-faint); max-width: 560px; }
+  .shot-wide { margin-top: 24px; border-radius: var(--radius-lg); overflow: hidden; box-shadow: 0 0 0 1px var(--stroke); }
+
+  /* вид интерфейса */
+  .look { display: grid; grid-template-columns: 1fr 1.6fr; gap: 64px; align-items: center; }
+  .look__sources { display: grid; gap: 0; margin-top: 40px; border-top: 1px solid var(--stroke-strong); }
+  .look__sources div { display: grid; grid-template-columns: 150px 1fr; gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--stroke-strong); font-size: 15px; }
+  .look__sources b { color: var(--text-strong); font-weight: 600; }
+  .look__sources span { color: var(--text-muted); }
+  .look__img { border-radius: var(--radius-lg); overflow: hidden; box-shadow: 0 0 0 1px var(--stroke-strong); }
+
+  /* остальное — построчный список */
+  .rest { border-top: 1px solid var(--stroke-strong); }
+  .rest__row { display: grid; grid-template-columns: 280px 1fr 200px; gap: 40px; padding: 32px 0; border-bottom: 1px solid var(--stroke-strong); align-items: baseline; }
+  .rest__row p { color: var(--text-muted); max-width: 560px; }
+  .rest__row .mono { color: var(--text-faint); text-align: right; font-size: 13px; }
+
+  /* обратимость и риски */
+  .safe { display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; }
+  .safe__card { background: var(--bg-surface); border-radius: var(--radius-lg); padding: 48px; }
+  .safe__card h3 { font-size: 28px; margin-bottom: 20px; }
+  .safe__card ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
+  .safe__card li { padding-left: 22px; position: relative; color: var(--text-muted); }
+  .safe__card li::before { content: ''; position: absolute; left: 0; top: 10px; width: 8px; height: 8px; border-radius: 2px; background: var(--text-faint); }
+  .safe__card--warn { background: transparent; box-shadow: inset 0 0 0 1px var(--stroke-strong); }
+  .safe__card--warn li::before { background: var(--yellow); }
+
+  /* доступ — таблица сравнения */
+  .tiers { width: 100%; border-collapse: separate; border-spacing: 0; }
+  .tiers th, .tiers td { padding: 18px 20px; text-align: center; border-bottom: 1px solid var(--stroke); font-size: 15px; }
+  .tiers th:first-child, .tiers td:first-child { text-align: left; color: var(--text); padding-left: 0; }
+  .tiers thead th { vertical-align: bottom; padding-top: 32px; padding-bottom: 28px; border-bottom: 1px solid var(--stroke-strong); }
+  .tiers thead th:not(:first-child) { width: 22%; }
+  .tier__name { display: block; font-size: 20px; font-weight: 600; color: var(--text-strong); }
+  .tier__price { display: block; font-size: 32px; font-weight: 700; color: var(--text-strong); margin: 10px 0 18px; letter-spacing: -0.02em; }
+  .tier__price small { font-size: 14px; font-weight: 500; color: var(--text-faint); }
+  .tiers .btn { height: 44px; padding: 0 20px; font-size: 14px; border-radius: 12px; }
+  .tiers .is-full { background: var(--bg-surface); }
+  .tiers thead .is-full { border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+  .tiers tbody tr:last-child .is-full { border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+  .yes { color: var(--text-strong); }
+  .no { color: var(--text-faint); }
+  .tiers__group td { padding-top: 32px; color: var(--text-faint) !important; font-size: 13px; border-bottom-color: transparent; }
+  .tiers__foot { display: flex; gap: 40px; flex-wrap: wrap; margin-top: 40px; color: var(--text-muted); font-size: 15px; }
+  .tiers__foot b { color: var(--text-strong); font-weight: 600; }
+
+  /* как начать */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin: 0; padding: 0; border-top: 1px solid var(--stroke-strong); counter-reset: s; }
+  .steps li { list-style: none; padding: 32px 32px 0 0; counter-increment: s; }
+  .steps li::before { content: counter(s); display: block; font: 600 14px var(--mono); color: var(--text-faint); margin-bottom: 40px; }
+  .steps p { color: var(--text-muted); margin-top: 10px; max-width: 320px; }
+
+  /* вопросы */
+  .faq { display: grid; grid-template-columns: 1fr 1.6fr; gap: 64px; }
+  .faq details { border-bottom: 1px solid var(--stroke-strong); }
+  .faq details:first-child { border-top: 1px solid var(--stroke-strong); }
+  .faq summary { list-style: none; cursor: pointer; padding: 24px 40px 24px 0; font-size: 18px; font-weight: 500; color: var(--text-strong); position: relative; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after { content: '+'; position: absolute; right: 4px; top: 20px; font-size: 24px; font-weight: 400; color: var(--text-muted); transition: transform .2s; }
+  .faq details[open] summary::after { transform: rotate(45deg); }
+  .faq details p { padding: 0 40px 28px 0; color: var(--text-muted); max-width: 640px; }
+
+  /* финал и подвал */
+  .final { padding: 120px 0 160px; }
+  .final .wrap { display: flex; justify-content: space-between; align-items: end; gap: 40px; flex-wrap: wrap; }
+  .final h2 { max-width: 760px; }
+  footer { border-top: 1px solid var(--stroke); padding: 40px 0 56px; font-size: 14px; color: var(--text-faint); }
+  footer .wrap { display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+  footer a { color: var(--text-muted); text-decoration: none; margin-left: 24px; }
+
+  .todo { color: var(--yellow); }
+
+  /* ——— узкие экраны ——— */
+  @media (max-width: 960px) {
+    .wrap { padding: 0 20px; }
+    .top nav { display: none; }
+    .top .btn { margin-left: auto; }
+    .top .wrap { gap: 16px; }
+    .logo { font-size: 14px; white-space: nowrap; gap: 10px; }
+    .top .btn { white-space: nowrap; padding: 0 14px; }
+    .hero { padding-top: 72px; }
+    .hero__text, .block__head, .look, .safe, .faq, .dmg__grid { grid-template-columns: 1fr; gap: 32px; }
+    .hero__stage { margin-top: 48px; }
+    section.block { padding: 100px 0; }
+    .block__head { margin-bottom: 48px; }
+    .dmg { height: auto; margin-top: 100px; }
+    .dmg__pin { position: static; height: auto; }
+    .dmg__scene { height: 360px; }
+    .ranks { grid-template-columns: 1fr; padding: 28px; gap: 32px; }
+    .ranks__src img { width: 120px; height: 120px; }
+    .ranks__row { gap: 8px; }
+    .rest__row { grid-template-columns: 1fr; gap: 8px; }
+    .rest__row .mono { text-align: left; }
+    .safe__card { padding: 28px; }
+    .tiers-scroll { overflow-x: auto; margin: 0 -20px; padding: 0 20px; }
+    .tiers { min-width: 640px; }
+    .steps { grid-template-columns: 1fr; }
+    .steps li { padding: 28px 0; border-bottom: 1px solid var(--stroke-strong); }
+    .steps li::before { margin-bottom: 16px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .window, .dmg__scene img { transform: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="#"><i></i>Сборщик интерфейса Aion</a>
+    <nav>
+      <a href="#features">Возможности</a>
+      <a href="#safe">Безопасность</a>
+      <a href="#access">Доступ</a>
+      <a href="#faq">Вопросы</a>
+    </nav>
+    <a class="btn btn--main" href="#access">Купить ключ</a>
+  </div>
+</header>
+
+<main>
+  <!-- 1. Первый экран -->
+  <section class="hero">
+    <div class="wrap">
+      <div class="hero__text">
+        <h1>Интерфейс Aion Classic под&nbsp;себя</h1>
+        <div class="hero__side">
+          <p class="lead">Цифры урона, иконки умений, шрифт, портрет, бафы и вид окон — в&nbsp;одной программе. <b>Без ручной правки файлов игры</b>: настроили, нажали «Собрать», зашли в&nbsp;игру.</p>
+          <div class="hero__cta">
+            <a class="btn btn--main" href="#access">Выбрать доступ</a>
+            <a class="btn btn--ghost" href="#features">Что можно поменять</a>
+          </div>
+          <p class="hero__note">Для Windows · проверено на сервере AionEmpire</p>
+        </div>
+      </div>
+      <div class="hero__stage">
+        <div class="window" id="heroWindow">
+          <img src="shots/d-skillicons.png" width="1600" height="950" alt="Окно программы, раздел «Иконки»: сетка иконок умений с фильтрами по классам">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Подписной блок: цифры урона растут при прокрутке -->
+  <div class="dmg" id="features">
+    <div class="dmg__pin">
+      <div class="wrap">
+        <div class="dmg__grid">
+          <div>
+            <h2>Цифры урона, которые видно</h2>
+            <div class="dmg__bar"><span id="dmgBar"></span></div>
+            <div class="dmg__value"><span id="dmgVal">100</span><small>%</small></div>
+            <div class="dmg__facts">
+              <p>Размер — <span>до 250%</span>, отдельно для цифр и для надписей «Крит!», «Блок!»</p>
+              <p>Свой шрифт, <span>8 цветов</span>, обводка, тень, градиент</p>
+              <p>Программа перерисовывает <span>114 картинок</span> игры и ставит их вместо родных</p>
+            </div>
+          </div>
+          <div class="dmg__scene">
+            <img id="dmgImg" src="shots/hitnum-digits.png" width="338" height="295" alt="Цифры урона восьми цветов, нарисованные программой">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Иконки умений -->
+  <section class="block">
+    <div class="wrap">
+      <div class="block__head">
+        <h2>Одна картинка — все ранги умения</h2>
+        <p class="lead">В игре у умения до пяти рангов и у каждого серый двойник для отката. Вы даёте <b>одну картинку</b> — программа сама раскрасит ранги в цвета родного семейства, поставит римские цифры и сделает серые.</p>
+      </div>
+      <div class="ranks">
+        <div class="ranks__src">
+          <img src="shots/rank-g1.png" alt="Исходная картинка умения">
+          <span>ваша картинка</span>
+        </div>
+        <div class="ranks__out">
+          <div class="ranks__toggle" role="group" aria-label="Состояние иконки">
+            <button type="button" aria-pressed="true" data-state="on">Готово</button>
+            <button type="button" aria-pressed="false" data-state="gray">На откате</button>
+          </div>
+          <div class="ranks__row" id="ranks">
+            <div class="ranks__cell"><img src="shots/rank-g1.png" data-g="1" alt="Ранг I"><em>I</em></div>
+            <div class="ranks__cell"><img src="shots/rank-g2.png" data-g="2" alt="Ранг II"><em>II</em></div>
+            <div class="ranks__cell"><img src="shots/rank-g3.png" data-g="3" alt="Ранг III"><em>III</em></div>
+            <div class="ranks__cell"><img src="shots/rank-g4.png" data-g="4" alt="Ранг IV"><em>IV</em></div>
+            <div class="ranks__cell"><img src="shots/rank-g5.png" data-g="5" alt="Ранг V"><em>V</em></div>
+          </div>
+          <p class="ranks__caption">2001 семейство умений всех восьми классов, с русскими названиями и фильтрами: атака, усиление, лечение, ловушки.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Вид интерфейса -->
+  <section class="block" style="padding-top:0">
+    <div class="wrap look">
+      <div>
+        <h2>Окна из трёх версий игры</h2>
+        <p class="lead" style="margin-top:28px">Рамки окон, кнопки, вкладки, ползунки — для каждой группы деталей свой источник. Можно смешивать как угодно.</p>
+        <div class="look__sources">
+          <div><b>Свой</b><span>как в игре сейчас</span></div>
+          <div><b>Classic</b><span>вид официального клиента — берётся из вашей установки</span></div>
+          <div><b>Aion 5.x</b><span>детали поздних версий</span></div>
+        </div>
+      </div>
+      <div class="look__img">
+        <img src="shots/d-look.png" width="1600" height="950" alt="Раздел «Вид интерфейса»: группы деталей с выбором источника" loading="lazy">
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Остальное -->
+  <section class="block" style="padding-top:0">
+    <div class="wrap">
+      <div class="block__head">
+        <h2>И ещё по мелочи</h2>
+        <p class="lead">То, что в игре не настраивается совсем.</p>
+      </div>
+      <div class="rest">
+        <div class="rest__row"><h3>Интерфейс</h3><p>Экран игры в программе: кликните по любой детали и замените её своей картинкой. Можно отделить элемент в одном окне, не трогая остальные.</p><span class="mono">1120 элементов</span></div>
+        <div class="rest__row"><h3>Крупный портрет</h3><p>Портрет персонажа в панели состояния — в несколько раз крупнее. Программа двигает и окно, и камеру, чтобы модель не обрезалась.</p><span class="mono">7 размеров</span></div>
+        <div class="rest__row"><h3>Бафы</h3><p>Размер значков эффектов, сколько их в ряд и насколько сдвинуть окно. Отдельно для бафов, дебафов, цели и питомца.</p><span class="mono">4 окна</span></div>
+        <div class="rest__row"><h3>Шрифт</h3><p>Свой .ttf вместо трёх шрифтов игры. Иероглифы остаются родными, чтобы ничего не пропало.</p><span class="mono">.ttf</span></div>
+        <div class="rest__row"><h3>Карты</h3><p>Своя картинка вместо большой карты зоны. Сравнение с родной, вписать или обрезать, этажи у многоуровневых зон.</p><span class="mono">63 зоны</span></div>
+        <div class="rest__row"><h3>Пресеты</h3><p>Все настройки и картинки — одним файлом. Сохраните несколько вариантов, переключайтесь между ними, делитесь с согильдийцами.</p><span class="mono">.aionpreset</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Обратимость и риски -->
+  <section class="block" id="safe" style="padding-top:0">
+    <div class="wrap">
+      <div class="block__head">
+        <h2>Вернуть как было — одна кнопка</h2>
+        <p class="lead">Перед первой сборкой программа сохраняет исходные файлы клиента. Всё, что она поменяла, снимается за один раз.</p>
+      </div>
+      <div class="safe">
+        <div class="safe__card">
+          <h3>Что программа делает</h3>
+          <ul>
+            <li>Меняет только файлы интерфейса в папке клиента. Память игры и сетевой трафик не трогает.</li>
+            <li>Хранит резервную копию исходников и возвращает их кнопкой «Вернуть как было».</li>
+            <li>После обновления клиента достаточно собрать заново — настройки остаются в пресете.</li>
+          </ul>
+        </div>
+        <div class="safe__card safe__card--warn">
+          <h3>О чём предупредить</h3>
+          <ul>
+            <li>Изменение файлов клиента — на ваше усмотрение. Правила у серверов разные, уточните у администрации своего.</li>
+            <li>Собирать нужно при закрытой игре: клиент читает файлы только при запуске.</li>
+            <li class="todo">[позиция администрации AionEmpire — формулировку согласовать]</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. Доступ -->
+  <section class="block" id="access" style="padding-top:0">
+    <div class="wrap">
+      <div class="block__head">
+        <h2>Три уровня доступа</h2>
+        <p class="lead">Ключ привязывается к вашему компьютеру. Цены и состав уровней — черновик.</p>
+      </div>
+      <div class="tiers-scroll">
+        <table class="tiers">
+          <thead>
+            <tr>
+              <th></th>
+              <th><span class="tier__name">Базовый</span><span class="tier__price">— ₽</span><a class="btn btn--ghost" href="#">Купить</a></th>
+              <th><span class="tier__name">Средний</span><span class="tier__price">— ₽</span><a class="btn btn--ghost" href="#">Купить</a></th>
+              <th class="is-full"><span class="tier__name">Полный</span><span class="tier__price">— ₽</span><a class="btn btn--main" href="#">Купить</a></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="tiers__group"><td colspan="4">Внешний вид</td></tr>
+            <tr><td>Крупный портрет</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes is-full">✓</td></tr>
+            <tr><td>Бафы</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes is-full">✓</td></tr>
+            <tr><td>Шрифт</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes is-full">✓</td></tr>
+            <tr><td>Цифры урона</td><td class="no">—</td><td class="yes">✓</td><td class="yes is-full">✓</td></tr>
+            <tr><td>Иконки умений</td><td class="no">—</td><td class="yes">✓</td><td class="yes is-full">✓</td></tr>
+            <tr><td>Карты</td><td class="no">—</td><td class="yes">✓</td><td class="yes is-full">✓</td></tr>
+            <tr><td>Вид окон: Classic и 5.x</td><td class="no">—</td><td class="no">—</td><td class="yes is-full">✓</td></tr>
+            <tr><td>Интерфейс: замена любой детали</td><td class="no">—</td><td class="no">—</td><td class="yes is-full">✓</td></tr>
+            <tr class="tiers__group"><td colspan="4">Пресеты</td></tr>
+            <tr><td>Загрузить готовый пресет</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes is-full">✓</td></tr>
+            <tr><td>Сохранять свои и делиться</td><td class="no">—</td><td class="yes">✓</td><td class="yes is-full">✓</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tiers__foot">
+        <p><b>Оплата</b> — картой на сайте или через FunPay</p>
+        <p><b>Обновления</b> — <span class="todo">[условия решить]</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. Как начать -->
+  <section class="block" style="padding-top:0">
+    <div class="wrap">
+      <div class="block__head">
+        <h2>Три шага до своего интерфейса</h2>
+        <p class="lead">Скачать, активировать, собрать.</p>
+      </div>
+      <ol class="steps">
+        <li><h3>Оплатите уровень</h3><p>Ключ придёт после оплаты. <span class="todo">[куда: почта / личный кабинет]</span></p></li>
+        <li><h3>Укажите папку игры</h3><p>Программа найдёт клиент, проверит язык и сделает резервную копию.</p></li>
+        <li><h3>Настройте и соберите</h3><p>Кнопка «Собрать и установить» — и можно заходить в игру.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 9. Вопросы -->
+  <section class="block" id="faq" style="padding-top:0">
+    <div class="wrap faq">
+      <h2>Вопросы</h2>
+      <div>
+        <details open><summary>На каких серверах работает?</summary><p>Проверено на AionEmpire. Поддержка других серверов Aion Classic — в работе. <span class="todo">[список серверов после тестов]</span></p></details>
+        <details><summary>Забанят за изменённый интерфейс?</summary><p>Программа меняет только картинки и разметку окон в файлах клиента — как ручная правка, но без ручной работы. Правила у каждого сервера свои; уточните у администрации. <span class="todo">[согласовать формулировку]</span></p></details>
+        <details><summary>Можно перенести ключ на другой компьютер?</summary><p><span class="todo">[решить: сколько ПК на ключ и как отвязать]</span></p></details>
+        <details><summary>Нужен ли интернет?</summary><p>Только для активации ключа. Дальше программа работает без сети. <span class="todo">[срок без проверки — уточнить]</span></p></details>
+        <details><summary>Что будет после обновления игры?</summary><p>Откройте программу и соберите заново — пресет со всеми настройками сохранится.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <section class="final">
+    <div class="wrap">
+      <h2>Соберите свой интерфейс сегодня вечером</h2>
+      <a class="btn btn--main" href="#access">Выбрать доступ</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Сборщик интерфейса Aion · самозанятый <span class="todo">[ФИО, ИНН]</span></span>
+    <span><a href="#">Discord</a><a href="#">Telegram</a><a href="#">Оферта</a></span>
+  </div>
+</footer>
+
+<script>
+  // Движение — только в двух местах: окно в первом экране и цифры урона.
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const narrow = () => innerWidth <= 960;
+  const win = document.getElementById('heroWindow');
+  const dmg = document.querySelector('.dmg');
+  const img = document.getElementById('dmgImg');
+  const val = document.getElementById('dmgVal');
+  const bar = document.getElementById('dmgBar');
+  const clamp = (v) => Math.min(1, Math.max(0, v));
+
+  function frame() {
+    if (!still) {
+      // окно программы «встаёт» из наклона к плоскости
+      const r = win.getBoundingClientRect();
+      const p = clamp(1 - r.top / innerHeight);
+      win.style.transform = `rotateX(${(1 - p) * 18}deg) scale(${0.9 + p * 0.1})`;
+    }
+    // цифры урона растут от 100% до 250% по мере прокрутки
+    let p;
+    if (narrow()) {
+      const r = dmg.getBoundingClientRect();
+      p = clamp((innerHeight - r.top) / (innerHeight + r.height * 0.5));
+    } else {
+      const r = dmg.getBoundingClientRect();
+      p = clamp(-r.top / (r.height - innerHeight));
+    }
+    if (still) p = 1;
+    const pct = Math.round(100 + 150 * p);
+    val.textContent = pct;
+    bar.style.width = (p * 100) + '%';
+    img.style.transform = `scale(${(0.4 + 0.6 * p).toFixed(3)})`;
+  }
+  addEventListener('scroll', () => requestAnimationFrame(frame), { passive: true });
+  addEventListener('resize', frame);
+  frame();
+
+  // иконки: готово / на откате
+  document.querySelectorAll('.ranks__toggle button').forEach((b) => {
+    b.addEventListener('click', () => {
+      const gray = b.dataset.state === 'gray';
+      document.querySelectorAll('.ranks__toggle button').forEach((x) => x.setAttribute('aria-pressed', x === b));
+      document.querySelectorAll('#ranks img').forEach((i) => {
+        i.src = `shots/rank-g${i.dataset.g}${gray ? '_gray' : ''}.png`;
+      });
+    });
+  });
+</script>
+</body>
+</html>

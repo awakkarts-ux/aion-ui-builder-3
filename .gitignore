@@ -1,0 +1,11 @@
+node_modules/
+dist/
+release/
+bundle/
+build-app/
+_before-claude-transfer/
+_claude-file-history/
+_recovery-archive/
+*.log
+.env
+.DS_Store

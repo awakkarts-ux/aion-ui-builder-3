@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AION2 status HUD preview</title>
+  <style>
+    :root {
+      --hud-width: 608px;
+      --hud-height: 177px;
+      --accent: #c9d2d8;
+      --hp-a: #ff5546;
+      --hp-b: #b8151b;
+      --mp-a: #4f87ff;
+      --mp-b: #1946b9;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #11161a; color: #eef2f4; font: 14px/1.2 "Segoe UI", sans-serif; }
+    body { display: grid; place-items: center; padding: 24px; }
+    .stage { width: min(100%, 900px); }
+    .hud { position: relative; width: var(--hud-width); height: var(--hud-height); max-width: 100%; margin: 0 auto 18px; overflow: hidden; background: linear-gradient(145deg, rgba(24,31,36,.92), rgba(6,10,13,.94)); border: 1px solid rgba(199,214,222,.18); box-shadow: 0 18px 42px #0008; }
+    .hud::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 18%, #ffffff08, transparent 45%), linear-gradient(90deg, transparent, #d8e5ec12 50%, transparent); }
+    .portrait { position: absolute; left: 24px; top: 28px; width: 84px; height: 84px; border: 3px solid #d5dde1; border-radius: 50%; background: radial-gradient(circle at 38% 28%, #d8b697 0 11%, #6d4d44 12% 26%, #182330 27% 70%, #05080b 71%); box-shadow: 0 0 0 8px #05080bcc, 0 0 0 10px #98aab4aa, inset 0 0 24px #000; z-index: 2; }
+    .portrait::after { content: ""; position: absolute; inset: 11px; border-radius: 50%; border: 1px solid #fff5; }
+    .level { position: absolute; left: 52px; top: 116px; z-index: 3; font-weight: 700; color: #fff; text-shadow: 0 2px 3px #000; }
+    .bars { position: absolute; left: 122px; top: 28px; width: 280px; z-index: 2; }
+    .bar { position: relative; height: 23px; margin-bottom: 5px; border: 1px solid #06080a; border-radius: 5px; overflow: hidden; background: #14191d; box-shadow: inset 0 2px 4px #000, 0 1px 2px #000; }
+    .bar > i { display: block; height: 100%; width: 72%; background: linear-gradient(#ff6757, var(--hp-b)); box-shadow: inset 0 1px #fff8; }
+    .bar.mp > i { width: 56%; background: linear-gradient(#5c92ff, var(--mp-b)); }
+    .bar span { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 600; letter-spacing: .3px; text-shadow: 0 2px 3px #000; }
+    .resource { position: absolute; right: 14px; top: 3px; color: #dce4e8; font-size: 12px; z-index: 2; }
+    .dp { position: absolute; left: 115px; top: 76px; width: 300px; height: 8px; border: 1px solid #172027; background: #0b1115; }
+    .dp i { display: block; width: 42%; height: 100%; background: linear-gradient(90deg, #15c6bf, #7be8dc); box-shadow: 0 0 8px #22c8c0; }
+    .hotbar { position: relative; width: 541px; max-width: 100%; height: 56px; margin: 0 auto 18px; padding: 8px 39px 8px 3px; display: grid; grid-template-columns: repeat(12, 40px); gap: 2px; background: linear-gradient(145deg, #252e33, #0d1216); border: 1px solid #64747d88; box-shadow: 0 8px 24px #0008, inset 0 0 0 1px #000; }
+    .slot { position: relative; width: 40px; height: 40px; border: 1px solid #8b9ba4aa; background: linear-gradient(145deg, #2b353b, #11171b); box-shadow: inset 0 0 0 1px #000, 0 2px 4px #000; display: grid; place-items: center; color: #dce8eb; font-weight: 700; }
+    .slot:nth-child(3n) { background: linear-gradient(145deg, #62352c, #1b1416); }
+    .slot em { position: absolute; left: 3px; top: 2px; font-size: 9px; font-style: normal; color: #f5d89c; }
+    .slot small { position: absolute; right: 3px; bottom: 2px; font-size: 9px; color: #d4e3e9; }
+    .quickbar-arrow { position: absolute; right: 8px; top: 8px; width: 16px; height: 40px; display: grid; place-items: center; color: #c8d3d8; border: 1px solid #58666d; background: #171e22; }
+    .quickbar-lock { position: absolute; right: 7px; bottom: -14px; width: 22px; height: 22px; border: 1px solid #6d7c83; background: #141a1e; color: #cad8dc; font-size: 11px; display: grid; place-items: center; }
+    .controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px; border: 1px solid #ffffff14; background: #0b1014; color: #b8c4c9; }
+    .controls label { display: inline-flex; align-items: center; gap: 7px; }
+    .controls input { accent-color: #50b9bd; }
+    @media (max-width: 680px) { body { padding: 10px; } .hud { transform-origin: top left; transform: scale(calc((100vw - 20px) / 608)); margin-bottom: calc(18px - (177px * (1 - (100vw - 20px) / 608))); } .controls { margin-top: -20px; } }
+  </style>
+</head>
+<body>
+  <main class="stage">
+    <section class="hud" aria-label="AION2 status HUD">
+      <div class="portrait" aria-hidden="true"></div>
+      <div class="level">31</div>
+      <div class="bars">
+        <div class="bar"><i id="hp-fill"></i><span>8 840 / 8 840</span></div>
+        <div class="bar mp"><i id="mp-fill"></i><span>4 887 / 4 887</span></div>
+      </div>
+      <div class="dp"><i></i></div>
+    </section>
+    <section class="hotbar" aria-label="Панель умений">
+      <div class="slot"><em>1</em>▧</div><div class="slot"><em>2</em>◈</div><div class="slot"><em>3</em>◉</div><div class="slot"><em>4</em>◆</div><div class="slot"><em>5</em>✹</div><div class="slot"><em>6</em>✦</div><div class="slot"><em>7</em>◌</div><div class="slot"><em>8</em>✧</div><div class="slot"><em>9</em>✥</div><div class="slot"><em>10</em>◍</div><div class="slot"><em>11</em>✺</div><div class="slot"><em>12</em>◈</div>
+      <div class="quickbar-arrow">↕</div><div class="quickbar-lock">▣</div>
+    </section>
+    <section class="controls">
+      <label>HP <input id="hp" type="range" min="0" max="100" value="72"></label>
+      <label>MP <input id="mp" type="range" min="0" max="100" value="56"></label>
+      <span>Интерактивный макет для согласования композиции</span>
+    </section>
+  </main>
+  <script>
+    const bind = (input, fill) => { input.addEventListener('input', () => { fill.style.width = input.value + '%'; }); };
+    bind(document.querySelector('#hp'), document.querySelector('#hp-fill'));
+    bind(document.querySelector('#mp'), document.querySelector('#mp-fill'));
+  </script>
+</body>
+</html>

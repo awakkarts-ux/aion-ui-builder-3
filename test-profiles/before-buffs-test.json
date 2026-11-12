@@ -1,0 +1,74 @@
+{
+  "layout": {},
+  "font": {
+    "enabled": false,
+    "file": "",
+    "langs": []
+  },
+  "packs": {
+    "skills": {
+      "data/skills/skills.pak|CBT_RA_HeavyShot_G1.dds": "C:\\Users\\Awakke\\AppData\\Roaming\\aion-ui-builder\\staged\\skills\\data_skills_skills.pak_CBT_RA_HeavyShot_G1.dds",
+      "data/skills/skills.pak|cbt_ra_heavyshot_g1_gray.dds": "C:\\Users\\Awakke\\AppData\\Roaming\\aion-ui-builder\\staged\\skills\\data_skills_skills.pak_cbt_ra_heavyshot_g1_gray.dds",
+      "data/skills/skills.pak|cbt_ra_heavyshot_g2.dds": "C:\\Users\\Awakke\\AppData\\Roaming\\aion-ui-builder\\staged\\skills\\data_skills_skills.pak_cbt_ra_heavyshot_g2.dds",
+      "data/skills/skills.pak|cbt_ra_heavyshot_g2_gray.dds": "C:\\Users\\Awakke\\AppData\\Roaming\\aion-ui-builder\\staged\\skills\\data_skills_skills.pak_cbt_ra_heavyshot_g2_gray.dds",
+      "data/skills/skills.pak|cbt_ra_heavyshot_g3.dds": "C:\\Users\\Awakke\\AppData\\Roaming\\aion-ui-builder\\staged\\skills\\data_skills_skills.pak_cbt_ra_heavyshot_g3.dds",
+      "data/skills/skills.pak|cbt_ra_heavyshot_g3_gray.dds": "C:\\Users\\Awakke\\AppData\\Roaming\\aion-ui-builder\\staged\\skills\\data_skills_skills.pak_cbt_ra_heavyshot_g3_gray.dds",
+      "data/skills/skills.pak|cbt_ra_heavyshot_g4.dds": "C:\\Users\\Awakke\\AppData\\Roaming\\aion-ui-builder\\staged\\skills\\data_skills_skills.pak_cbt_ra_heavyshot_g4.dds",
+      "data/skills/skills.pak|cbt_ra_heavyshot_g4_gray.dds": "C:\\Users\\Awakke\\AppData\\Roaming\\aion-ui-builder\\staged\\skills\\data_skills_skills.pak_cbt_ra_heavyshot_g4_gray.dds",
+      "data/skills/skills.pak|cbt_ra_heavyshot_g5.dds": "C:\\Users\\Awakke\\AppData\\Roaming\\aion-ui-builder\\staged\\skills\\data_skills_skills.pak_cbt_ra_heavyshot_g5.dds",
+      "data/skills/skills.pak|cbt_ra_heavyshot_g5_gray.dds": "C:\\Users\\Awakke\\AppData\\Roaming\\aion-ui-builder\\staged\\skills\\data_skills_skills.pak_cbt_ra_heavyshot_g5_gray.dds",
+      "data/skills/skills.pak|CBT_RA_EntangleShot_G1.dds": "C:\\Users\\Awakke\\AppData\\Roaming\\aion-ui-builder\\staged\\skills\\data_skills_skills.pak_CBT_RA_EntangleShot_G1.dds",
+      "data/skills/skills.pak|cbt_ra_entangleshot_g1_gray.dds": "C:\\Users\\Awakke\\AppData\\Roaming\\aion-ui-builder\\staged\\skills\\data_skills_skills.pak_cbt_ra_entangleshot_g1_gray.dds",
+      "data/skills/skills.pak|CBT_RA_EntangleShot_G2.dds": "C:\\Users\\Awakke\\AppData\\Roaming\\aion-ui-builder\\staged\\skills\\data_skills_skills.pak_CBT_RA_EntangleShot_G2.dds",
+      "data/skills/skills.pak|cbt_ra_entangleshot_g2_gray.dds": "C:\\Users\\Awakke\\AppData\\Roaming\\aion-ui-builder\\staged\\skills\\data_skills_skills.pak_cbt_ra_entangleshot_g2_gray.dds",
+      "data/skills/skills.pak|cbt_ra_entangleshot_g3.dds": "C:\\Users\\Awakke\\AppData\\Roaming\\aion-ui-builder\\staged\\skills\\data_skills_skills.pak_cbt_ra_entangleshot_g3.dds",
+      "data/skills/skills.pak|cbt_ra_entangleshot_g3_gray.dds": "C:\\Users\\Awakke\\AppData\\Roaming\\aion-ui-builder\\staged\\skills\\data_skills_skills.pak_cbt_ra_entangleshot_g3_gray.dds",
+      "data/skills/skills.pak|cbt_ra_entangleshot_g4.dds": "C:\\Users\\Awakke\\AppData\\Roaming\\aion-ui-builder\\staged\\skills\\data_skills_skills.pak_cbt_ra_entangleshot_g4.dds",
+      "data/skills/skills.pak|cbt_ra_entangleshot_g4_gray.dds": "C:\\Users\\Awakke\\AppData\\Roaming\\aion-ui-builder\\staged\\skills\\data_skills_skills.pak_cbt_ra_entangleshot_g4_gray.dds",
+      "data/skills/skills.pak|cbt_ra_entangleshot_g5.dds": "C:\\Users\\Awakke\\AppData\\Roaming\\aion-ui-builder\\staged\\skills\\data_skills_skills.pak_cbt_ra_entangleshot_g5.dds",
+      "data/skills/skills.pak|cbt_ra_entangleshot_g5_gray.dds": "C:\\Users\\Awakke\\AppData\\Roaming\\aion-ui-builder\\staged\\skills\\data_skills_skills.pak_cbt_ra_entangleshot_g5_gray.dds"
+    },
+    "hitnum": {},
+    "uiatlas": {}
+  },
+  "skins": {},
+  "lang": "rus",
+  "v5": {
+    "enabled": false,
+    "rules": {
+      "variant": false,
+      "norm": false,
+      "state": false
+    }
+  },
+  "classic": {
+    "enabled": true,
+    "root": "C:\\Users\\Awakke\\AppData\\Roaming\\aion-ui-builder\\official-classic",
+    "off": {},
+    "rules": {
+      "v3odd": true,
+      "same": true
+    },
+    "hud": {
+      "enabled": true,
+      "off": {
+        "game/target_dialog.xml": false
+      },
+      "radarSize": "ours",
+      "set": "s2"
+    },
+    "maps": true,
+    "source": "E:\\Aion Classic"
+  },
+  "portrait": {
+    "enabled": false,
+    "preset": 6,
+    "x": -75,
+    "y": -105,
+    "size": 280,
+    "maleDist": 3.6,
+    "maleHeight": 0.4,
+    "femaleDist": 3.38,
+    "femaleHeight": 0.31
+  }
+}

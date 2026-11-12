@@ -1,0 +1,366 @@
+/* Живой слой окна (22.10.2026, референсы пользователя: тёплые градиенты в
+   карточках, стекло, переливающаяся обводка, подвижное меню). Подключается
+   после app.css и только добавляет поверх: убрать файл — вернётся прежний вид.
+   Все ручки (цвета, скорость, толщина) — в tokens.css, блок «живой слой». */
+
+@property --flow-a { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@keyframes flow-spin { to { --flow-a: 360deg; } }
+
+/* ---------- фон окна: еле заметное зарево за панелями ---------- */
+html, body { background: var(--aura), var(--bg-base); }
+.titlebar { background: transparent; }
+.view { background: rgba(21, 21, 22, 0.86); }
+
+/* значок программы: градиент медленно поворачивается */
+.titlebar__dot {
+  background: conic-gradient(from var(--flow-a), var(--g-ember-1), var(--g-ember-2), var(--g-violet-2), var(--g-ember-1));
+  animation: flow-spin 8s linear infinite;
+  box-shadow: 0 0 14px rgba(255, 90, 60, 0.35);
+}
+
+/* ---------- переливающаяся обводка ----------
+   Кольцо толщиной --flow-w: конический градиент, вырезанный маской по
+   внутреннему краю. Угол крутится через @property — блики бегут по кругу.
+   .flow — всегда видна (баннеры); у кнопок и плашек — только при наведении,
+   и вращение стоит на паузе, пока её не видно. */
+.flow, .btn:not(.btn--primary), .tb-chip, .pset__btn { position: relative; isolation: isolate; }
+.flow::after,
+.btn:not(.btn--primary)::after,
+.tb-chip::after, .pset__btn::after,
+.rail::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
+  padding: var(--flow-w);
+  background: conic-gradient(from var(--flow-a),
+    var(--flow-dim) 0deg, var(--flow-a1) 55deg, var(--flow-dim) 125deg,
+    var(--flow-dim) 180deg, var(--flow-a2) 235deg, var(--flow-dim) 305deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: var(--flow-rest);
+  transition: opacity .3s ease;
+  animation: flow-spin var(--flow-speed) linear infinite;
+}
+.flow:hover::after, .flow:focus-visible::after, .flow.is-on::after { opacity: var(--flow-hover); }
+
+.btn:not(.btn--primary)::after, .tb-chip::after, .pset__btn::after, .rail::after {
+  opacity: 0;
+  animation-play-state: paused;
+}
+.btn:not(.btn--primary):not([disabled]):hover::after, .btn:not(.btn--primary):focus-visible::after,
+.tb-chip:hover::after, .tb-chip[aria-expanded='true']::after,
+.pset__btn:hover::after, .pset__btn[aria-expanded='true']::after {
+  opacity: var(--flow-hover);
+  animation-play-state: running;
+}
+/* у обводки-рамки своя кромка не нужна */
+.btn--ghost:not([disabled]):hover { box-shadow: none; }
+
+/* ---------- главная кнопка: светлая пилюля с бегущим бликом ---------- */
+.btn--primary {
+  background: linear-gradient(110deg, var(--accent) 35%, #ffffff 48%, #ffe3d6 52%, var(--accent) 65%) var(--accent);
+  background-size: 260% 100%;
+  background-position: 100% 0;
+  transition: background-position .7s cubic-bezier(.2, .9, .3, 1), box-shadow .3s ease, transform .15s ease;
+}
+.btn--primary:not([disabled]):hover {
+  background: linear-gradient(110deg, var(--accent) 35%, #ffffff 48%, #ffe3d6 52%, var(--accent) 65%) var(--accent);
+  background-size: 260% 100%;
+  background-position: 0 0;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .25), 0 6px 24px rgba(255, 120, 80, .25);
+}
+.btn:not([disabled]):active { transform: translateY(1px) scale(.99); }
+
+/* ---------- карточки: кромка градиентом, а не сплошной ---------- */
+.card { position: relative; }
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, .10), rgba(255, 255, 255, .02) 40%,
+    rgba(255, 255, 255, .02) 70%, rgba(255, 106, 61, .14));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ---------- меню слева: живое ---------- */
+/* раскрытое поверх — обводка переливается */
+.rail.is-open:not(.is-pinned)::after { opacity: var(--flow-hover); animation-play-state: running; }
+.rail.is-open:not(.is-pinned) { border-color: transparent; }
+
+/* плашка наведения — стеклянная, с тёплым краем */
+.rail .hl {
+  background: linear-gradient(90deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .025));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
+}
+
+/* значок: при наведении приподнимается, у выбранного — тлеющий градиент со свечением */
+.nav__ic {
+  transition: transform .25s cubic-bezier(.3, 1.5, .5, 1), background-color .2s ease, color .2s ease, box-shadow .3s ease;
+}
+.nav:hover .nav__ic { transform: translateY(-1px) scale(1.06); }
+.nav:active .nav__ic { transform: scale(.94); }
+.nav.is-active .nav__ic {
+  background: linear-gradient(135deg, var(--g-ember-1), var(--g-ember-2));
+  color: #fff;
+  box-shadow: var(--glow-hot), inset 0 1px 0 rgba(255, 255, 255, .28);
+}
+.nav.is-active { background: linear-gradient(90deg, rgba(255, 106, 61, .14), rgba(255, 106, 61, 0) 80%); }
+
+/* подписи выезжают лесенкой: --i — номер пункта (ставит app.js) */
+.rail .nav > span:not(.nav__ic),
+.rail .rail__group > span {
+  transform: translateX(-8px);
+  transition: opacity .14s ease, transform .2s ease;
+}
+.rail.is-open .nav > span:not(.nav__ic),
+.rail.is-open .rail__group > span {
+  transform: none;
+  transition: opacity .22s ease, transform .32s cubic-bezier(.2, .9, .3, 1);
+  transition-delay: calc(40ms + var(--i, 0) * 18ms);
+}
+
+/* метка выбранного раздела: светящаяся черта у левого края, переезжает пружиной */
+.rail > .rail__mark {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  top: 0;
+  width: 3px;
+  height: 22px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, var(--g-ember-1), var(--g-violet-2));
+  box-shadow: 0 0 12px rgba(255, 106, 61, .7);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform .5s cubic-bezier(.3, 1.35, .45, 1), opacity .25s ease, height .3s ease;
+}
+.rail > .rail__mark.is-on { opacity: 1; }
+
+/* ---------- главная: три баннера ---------- */
+.view[data-view='home'] { padding: 28px 32px 32px; }
+.home__head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 20px; }
+.home__head h1 { margin: 0; }
+.home__head p { margin: 6px 0 0; color: var(--text-muted); max-width: 560px; line-height: 1.55; }
+.home__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  min-height: clamp(400px, calc(100vh - 230px), 600px);
+}
+@media (max-width: 900px) {
+  .home__grid { grid-template-columns: 1fr; min-height: 0; }
+  .hb { min-height: 320px; }
+}
+
+.hb {
+  --g1: var(--g-steel-1); --g2: var(--g-steel-2); --g3: var(--g-steel-3);
+  --mx: 50%; --my: 30%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  border-radius: 22px;
+  overflow: hidden;
+  background: var(--g3);
+  color: var(--text-strong);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  border: 0;
+  transition: transform .35s cubic-bezier(.2, .9, .3, 1), box-shadow .35s ease;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .35);
+}
+.hb:hover { transform: translateY(-3px); box-shadow: 0 28px 60px rgba(0, 0, 0, .5); }
+.hb:focus-visible { outline: none; }
+.hb--classic { --g1: var(--g-ember-1); --g2: var(--g-ember-2); --g3: var(--g-ember-3); --flow-a1: #ffb08a; --flow-a2: #ff3d6e; }
+.hb--v5 { --g1: var(--g-violet-1); --g2: var(--g-violet-2); --g3: var(--g-violet-3); --flow-a1: #8fb0ff; --flow-a2: #d07bff; }
+.hb--guide { --flow-a1: #ff8a5c; --flow-a2: #8f8f95; }
+
+/* пятна градиента плывут; размытие у слоя один раз, двигается только transform */
+.hb__glow {
+  position: absolute;
+  inset: -35%;
+  z-index: -2;
+  background:
+    radial-gradient(38% 34% at 28% 22%, var(--g1), transparent 70%),
+    radial-gradient(42% 40% at 78% 74%, var(--g2), transparent 72%),
+    radial-gradient(30% 30% at 70% 18%, color-mix(in srgb, var(--g1) 60%, transparent), transparent 70%);
+  filter: blur(28px);
+  opacity: .8;
+  animation: hb-drift var(--g-drift) ease-in-out infinite alternate;
+  transition: opacity .4s ease;
+}
+.hb--guide .hb__glow { opacity: .35; }
+.hb:hover .hb__glow { opacity: 1; }
+.hb--guide:hover .hb__glow { opacity: .55; }
+@keyframes hb-drift {
+  0% { transform: translate(-5%, -4%) rotate(0deg) scale(1); }
+  50% { transform: translate(4%, 2%) rotate(12deg) scale(1.08); }
+  100% { transform: translate(6%, 6%) rotate(24deg) scale(1.14); }
+}
+/* световое пятно за курсором */
+.hb__spot {
+  position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(320px circle at var(--mx) var(--my), rgba(255, 255, 255, .10), transparent 60%);
+  opacity: 0; transition: opacity .3s ease;
+}
+.hb:hover .hb__spot { opacity: 1; }
+/* зерно — чтобы градиент не был «пластиковым» */
+.hb__grain {
+  position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .14; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.hb__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.hb__top b { font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+.hb__top small { display: block; margin-top: 4px; font-size: 12.5px; color: rgba(255, 255, 255, .6); }
+.hb__round {
+  flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
+  background: #fff; color: #0b0b0c; border: 0; cursor: pointer;
+  transition: transform .3s cubic-bezier(.3, 1.5, .5, 1), box-shadow .3s ease;
+}
+.hb__round svg { width: 16px; height: 16px; }
+.hb:hover .hb__round { transform: rotate(45deg); box-shadow: 0 0 0 6px rgba(255, 255, 255, .08); }
+.hb.is-on .hb__round { transform: none; }
+
+/* середина: крупный знак варианта на точечной сетке */
+.hb__mid { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; min-height: 120px; }
+.hb__dots {
+  position: absolute; inset: 8% 6%;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, .22) 1.2px, transparent 1.6px);
+  background-size: 22px 22px;
+  -webkit-mask: radial-gradient(closest-side, #000 30%, transparent);
+  mask: radial-gradient(closest-side, #000 30%, transparent);
+  transition: background-size .6s cubic-bezier(.2, .9, .3, 1);
+}
+.hb:hover .hb__dots { background-size: 24px 24px; }
+.hb__big {
+  position: relative; font-size: clamp(54px, 6vw, 92px); font-weight: 300; letter-spacing: -.05em; line-height: 1;
+  color: #fff; text-shadow: 0 8px 40px rgba(0, 0, 0, .35);
+  transition: transform .5s cubic-bezier(.2, .9, .3, 1), letter-spacing .5s ease;
+}
+.hb:hover .hb__big { transform: scale(1.04); letter-spacing: -.04em; }
+
+/* шаги «Как пользоваться» */
+.hb__steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; width: 100%; counter-reset: s; }
+.hb__steps li {
+  counter-increment: s; display: flex; gap: 14px; align-items: baseline; padding: 12px 14px;
+  border-radius: 14px; background: rgba(255, 255, 255, .04); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
+  font-size: 13.5px; line-height: 1.45; color: var(--text);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  transition: background .25s ease, transform .35s cubic-bezier(.2, .9, .3, 1);
+}
+.hb__steps li::before {
+  content: counter(s, decimal-leading-zero); font-family: var(--mono); font-size: 12px; color: var(--hot-solid); flex: none;
+}
+.hb:hover .hb__steps li { background: rgba(255, 255, 255, .06); }
+.hb__steps li:hover { transform: translateX(3px); }
+
+.hb__foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.hb__foot p { margin: 0; font-size: 13px; line-height: 1.5; color: rgba(255, 255, 255, .72); max-width: 300px; }
+.hb__acts { display: flex; align-items: center; gap: 12px; flex: none; }
+.pill {
+  flex: none; height: 38px; padding: 0 18px; display: inline-flex; align-items: center; gap: 8px;
+  border: 0; border-radius: 999px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  background: #fff; color: #0b0b0c;
+  transition: transform .2s ease, box-shadow .3s ease, background .2s ease;
+}
+.pill:hover { box-shadow: 0 0 0 4px rgba(255, 255, 255, .12); }
+.pill:active { transform: scale(.97); }
+.pill--glass {
+  background: rgba(255, 255, 255, .10); color: #fff;
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14);
+}
+.pill--glass:hover { background: rgba(255, 255, 255, .16); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22); }
+.pill svg { width: 14px; height: 14px; }
+/* узкий баннер: текст над кнопками, а не столбиком в одно слово */
+.hb { container-type: inline-size; }
+@container (max-width: 380px) {
+  .hb__foot { flex-direction: column; align-items: flex-start; }
+  .hb__foot p { max-width: none; }
+}
+.hb__on { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: #fff; }
+.hb__on::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green); }
+
+.home__note { margin-top: 14px; font-size: 12.5px; color: var(--text-faint); }
+.home__note button { background: none; border: 0; padding: 0; font: inherit; color: var(--text-muted); text-decoration: underline;
+  text-underline-offset: 3px; cursor: pointer; }
+.home__note button:hover { color: var(--text-strong); }
+
+/* ---------- инструкция ---------- */
+.gd__steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0 0 8px; padding: 0; list-style: none; }
+.gd__steps li { gap: 6px; }
+.gd__steps i { font-style: normal; font-family: var(--mono); font-size: 12px; color: var(--hot-solid); }
+.gd__steps b { display: block; color: var(--text-strong); font-size: 14px; }
+.gd__steps p, .gd__rules p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--text-muted); }
+.gd__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.gd__item { gap: 10px; transition: background .2s ease, transform .3s cubic-bezier(.2, .9, .3, 1); }
+.gd__item:hover { background: #1f1f22; transform: translateY(-2px); }
+.gd__item header { display: flex; align-items: center; gap: 12px; }
+.gd__item header .nav__ic { background: var(--bg-deep); color: var(--text-strong); }
+.gd__item:hover header .nav__ic { background: linear-gradient(135deg, var(--g-ember-1), var(--g-ember-2)); color: #fff; box-shadow: var(--glow-hot); }
+.gd__item b { font-size: 14.5px; color: var(--text-strong); }
+.gd__item p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--text-muted); flex: 1; }
+.gd__go { align-self: flex-start; background: none; border: 0; padding: 0; font: inherit; font-size: 13px; font-weight: 500;
+  color: var(--text); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.gd__go svg { width: 14px; height: 14px; transition: transform .25s ease; }
+.gd__go:hover { color: var(--text-strong); }
+.gd__go:hover svg { transform: translateX(3px); }
+.gd__rules { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.gd__rules b { display: block; margin-bottom: 4px; color: var(--text-strong); font-size: 13.5px; }
+@media (max-width: 1100px) { .gd__steps, .gd__rules { grid-template-columns: 1fr; } }
+
+/* ---------- окно «Сбросить к заводскому» ---------- */
+.rst { width: min(560px, calc(100vw - 48px)); }
+.rst__warn {
+  display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: var(--radius);
+  background: linear-gradient(135deg, rgba(255, 173, 92, .12), rgba(255, 106, 61, .05));
+  box-shadow: inset 0 0 0 1px rgba(255, 173, 92, .28);
+}
+.rst__warn[hidden] { display: none; }
+.rst__warn b { color: var(--yellow); font-size: 13.5px; }
+.rst__warn p { font-size: 13px; }
+.rst__warn .btn { align-self: flex-start; padding: 10px 16px; font-size: 13px; }
+.rst__list { display: flex; flex-direction: column; gap: 6px; }
+.rst__row {
+  display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: var(--radius-sm);
+  background: var(--bg-deep);
+}
+.rst__row > span:last-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rst__row b { color: var(--text-strong); font-size: 13.5px; font-weight: 600; }
+.rst__row small { color: var(--text-muted); font-size: 12.5px; line-height: 1.45; }
+.rst__dot { flex: none; width: 8px; height: 8px; margin: 6px 2px 0; border-radius: 50%; background: var(--text-faint); }
+.rst__row.is-on .rst__dot { background: var(--hot-solid); box-shadow: 0 0 10px rgba(255, 106, 61, .6); }
+.rst__row--opt { cursor: pointer; }
+.rst__row--opt input { margin: 2px 0 0; flex: none; }
+.rst__row details { margin-top: 4px; }
+.rst__row summary { font-size: 12px; color: var(--text-muted); cursor: pointer; }
+.rst__files { margin-top: 6px; font-family: var(--mono); font-size: 11.5px; line-height: 1.6; color: var(--text-muted);
+  max-height: 140px; overflow: auto; user-select: text; word-break: break-all; }
+
+/* появление раздела: мягкий подъём */
+.view.is-active > * { animation: view-in .45s cubic-bezier(.2, .9, .3, 1) both; }
+.view.is-active > :nth-child(2) { animation-delay: 30ms; }
+.view.is-active > :nth-child(3) { animation-delay: 60ms; }
+.view.is-active > :nth-child(n+4) { animation-delay: 90ms; }
+.view[data-view='editor'].is-active > *, .view[data-view='maps'].is-active > *, .view[data-view='layout'].is-active > * { animation: none; }
+@keyframes view-in { from { opacity: 0; transform: translateY(6px); } }
+.home__grid > .hb { animation: view-in .55s cubic-bezier(.2, .9, .3, 1) both; }
+.home__grid > .hb:nth-child(2) { animation-delay: 70ms; }
+.home__grid > .hb:nth-child(3) { animation-delay: 140ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .flow::after, .rail::after, .titlebar__dot, .hb__glow { animation: none; }
+  .view.is-active > *, .home__grid > .hb { animation: none; }
+}
+

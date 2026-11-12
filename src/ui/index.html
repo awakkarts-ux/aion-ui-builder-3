@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' data:; font-src 'self' file:; style-src 'self' 'unsafe-inline'" />
+  <title>Сборщик интерфейса Aion</title>
+  <link rel="stylesheet" href="tokens.css" />
+  <link rel="stylesheet" href="app.css" />
+  <link rel="stylesheet" href="live.css" />
+  <link rel="stylesheet" href="header.css" />
+</head>
+<body>
+  <header class="titlebar">
+    <div class="titlebar__brand"><span class="titlebar__dot"></span></div>
+    <button class="tb-chip" id="cl-btn" type="button" title="Клиент игры">
+      <span class="tb-chip__dot" id="cl-dot"></span>
+      <b id="cl-name">Aion Empire</b>
+      <small id="cl-lang">RUS</small>
+      <img src="assets/figma-header/chevron.svg" alt="" />
+    </button>
+    <div class="pset" id="pset">
+      <button class="pset__btn" id="pset-btn" aria-haspopup="menu" aria-expanded="false">
+        <span class="pset__text"><small>Пресет</small><b id="pset-name">не сохранён</b></span>
+        <em class="pset__mark" id="pset-mark" hidden>изменено</em>
+        <img class="pset__chev" src="assets/figma-header/chevron.svg" alt="" />
+      </button>
+      <div class="pset__menu" id="pset-menu" role="menu" hidden></div>
+    </div>
+    <div class="titlebar__drag"></div>
+    <div class="titlebar__actions">
+      <button class="btn btn--ghost" id="do-restore"><img src="assets/figma-header/restore.svg" alt="" />Вернуть как было</button>
+      <button class="btn btn--primary" id="do-apply">Собрать и установить</button>
+    </div>
+    <!-- Системные кнопки окна -->
+    <div class="titlebar__buttons">
+      <button class="wbtn" id="w-min" title="Свернуть"><img src="assets/figma-header/maximize.svg" alt="" /></button>
+      <button class="wbtn" id="w-max" title="Развернуть"><img src="assets/figma-header/close.svg" alt="" /></button>
+      <button class="wbtn" id="w-close" title="Закрыть"><img src="assets/figma-header/minimize.svg" alt="" /></button>
+    </div>
+    <span class="titlebar__path" id="tb-path" hidden>клиент не выбран</span>
+  </header>
+
+  <div class="shell">
+    <nav class="rail">
+      <div class="rail__group">Разделы</div>
+      <button class="nav is-active" data-view="home"><span>Главная</span></button>
+      <button class="nav" data-view="client"><span>Клиент</span></button>
+      <button class="nav" data-view="portrait"><span>Крупный портрет</span><em id="badge-portrait"></em></button>
+      <button class="nav" data-view="buffs"><span>Бафы</span><em id="badge-buffs"></em></button>
+      <button class="nav" data-view="font"><span>Шрифт</span><em id="badge-font"></em></button>
+      <button class="nav" data-view="skillicons"><span>Иконки</span><em id="badge-skills"></em></button>
+      <button class="nav" data-view="hitnum"><span>Цифры урона</span><em id="badge-hitnum"></em></button>
+      <button class="nav" data-view="editor"><span>Интерфейс</span><em id="badge-editor"></em></button>
+      <button class="nav" data-view="look"><span>Вид интерфейса</span><em id="badge-look"></em></button>
+      <button class="nav" data-view="maps"><span>Карты</span><em id="badge-maps"></em></button>
+      <button class="nav" data-view="apply"><span>Сборка</span></button>
+
+      <div class="rail__group">Тонкая настройка</div>
+      <button class="nav" data-view="classic"><span>Официальный Classic</span><em id="badge-classic"></em></button>
+      <button class="nav" data-view="v5"><span>Aion 5.x</span><em id="badge-v5"></em></button>
+      <button class="nav" data-view="skins"><span>Скины элементов</span><em id="badge-skins"></em></button>
+      <button class="nav" data-view="icons" data-pack="uiatlas"><span>Картинки интерфейса</span><em id="badge-uiatlas"></em></button>
+      <button class="nav" data-view="layout"><span>Раскладка окон</span><em id="badge-layout"></em></button>
+
+      <div class="rail__spacer"></div>
+      <button class="nav" data-view="guide"><span>Инструкция</span></button>
+    </nav>
+
+    <main class="stage">
+      <section class="view is-active" data-view="home">
+        <h1>С чего начать</h1>
+        <p class="lede">Выберите основу вида и изучите, что меняет каждый раздел программы.</p>
+        <div class="home__grid" id="home-grid"></div>
+        <div class="home__note" id="home-note"></div>
+      </section>
+      <section class="view" data-view="guide">
+        <h1>Инструкция</h1>
+        <p class="lede">Как устроена программа и что делает каждый раздел.</p>
+        <ol class="gd__steps" id="gd-steps"></ol>
+        <h2>Разделы</h2>
+        <div class="gd__grid" id="gd-grid"></div>
+        <h2>Важно знать</h2>
+        <div class="gd__rules" id="gd-rules"></div>
+      </section>
+      <!-- ================= Клиент ================= -->
+      <section class="view" data-view="client">
+        <h1>Клиент</h1>
+        <p class="lede">Укажи папку <code>classic</code> — ту, где лежат <code>bin64</code> и <code>data</code>.
+          Все правки применяются к её пакам, оригиналы сохраняются и возвращаются одной кнопкой.</p>
+
+        <div class="card">
+          <div class="row">
+            <label>Папка игры</label>
+            <input type="text" id="client-path" readonly placeholder="не выбрана" />
+            <button class="btn" id="client-pick">Выбрать…</button>
+          </div>
+          <div class="row">
+            <label>Состояние</label>
+            <div id="client-state" class="state">проверяю…</div>
+          </div>
+          <div class="row">
+            <label>Язык клиента</label>
+            <select id="client-lang" class="sel"></select>
+            <span class="muted">интерфейс правится в <code>l10n/&lt;язык&gt;/data/data.pak</code> —
+              клиент читает его, а не <code>data/ui</code></span>
+          </div>
+          <div class="row">
+            <label>Мастер</label>
+            <button class="btn btn--ghost" id="wz-open">Пройти мастер настройки заново</button>
+          </div>
+        </div>
+
+        <h2>Что сейчас подменено</h2>
+        <div class="card" id="status-box"><div class="muted">пока ничего</div></div>
+
+        <h2>Сброс к штатному виду</h2>
+        <p class="lede">Вернёт из резервных копий всё, что правил сборщик, и уберёт файлы,
+          которых в чистом клиенте не было: подменённые шрифты и сторонние паки поверх
+          интерфейса. Убранное не удаляется, а лежит в карантине — можно вернуть.</p>
+        <div class="card">
+          <div id="reset-plan" class="muted">проверяю…</div>
+          <div class="row">
+            <button class="btn btn--danger" id="reset-run">Сбросить всё к штатному</button>
+            <button class="btn" id="reset-undo">Вернуть убранное</button>
+            <button class="btn btn--ghost" id="reset-refresh">Проверить заново</button>
+          </div>
+        </div>
+
+        <h2>Профиль</h2>
+        <div class="card">
+          <div class="row">
+            <label>Набор правок</label>
+            <span class="muted">сохранять и переключать наборы — в «Пресете» внизу слева</span>
+            <button class="btn btn--danger" id="profile-clear">Сбросить всё</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= Раскладка ================= -->
+      <section class="view" data-view="layout">
+        <div class="layout">
+          <div class="layout__side">
+            <div class="search">
+              <input type="text" id="dlg-search" placeholder="Поиск диалога" />
+            </div>
+            <div class="side-opts">
+              <label class="check"><input type="checkbox" id="dlg-hud-only" checked /> только HUD</label>
+              <select id="hud-set" class="sel sel--sm" title="Набор HUD">
+                <option value="hud_s1">набор s1</option>
+                <option value="hud_s2">набор s2</option>
+              </select>
+            </div>
+            <div class="list" id="dlg-list"></div>
+          </div>
+
+          <div class="layout__main">
+            <div class="toolbar">
+              <select id="shot-pick" class="sel" title="Подложка"></select>
+              <label class="check"><input type="checkbox" id="opt-grid" /> сетка</label>
+              <label class="check"><input type="checkbox" id="opt-all" /> показывать все</label>
+              <span class="grow"></span>
+              <span class="hint">тащи мышью · Shift — шаг 10&nbsp;px · стрелки двигают выбранный</span>
+            </div>
+            <div class="notice">
+              Окна HUD, бафы, дебафы, цель и ряды умений игра ставит сама — их место отсюда не
+              меняется, только размер и элементы внутри. Для остальных окон после установки нажми в игре
+              <b>«Расположить окна по умолчанию»</b>. Место карты — в «Виде интерфейса».
+            </div>
+            <div class="canvas-wrap">
+              <div class="canvas-holder">
+              <div class="canvas" id="canvas">
+                <img id="canvas-shot" alt="" />
+                <div class="canvas__grid" id="canvas-grid"></div>
+              </div>
+              </div>
+            </div>
+          </div>
+
+          <aside class="layout__props" id="props">
+            <div class="muted pad">Выбери диалог слева или прямоугольник на поле.</div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ================= Портрет ================= -->
+      <section class="view" data-view="portrait">
+        <h1>Крупный 3D-портрет</h1>
+        <p class="lede">Окно портрета — виджет <code>portrait</code> в панели состояния,
+          а размер самой модели задаёт камера в <code>UI_ModelCam.xml</code>.
+          Растянуть одно окно мало: модель останется прежней, поэтому пресет двигает и камеру.</p>
+
+        <div class="card">
+          <div class="row">
+            <label>Применять</label>
+            <label class="check"><input type="checkbox" id="pt-on" /> менять размер портрета</label>
+          </div>
+          <div class="row">
+            <label>Пресет</label>
+            <select id="pt-preset" class="sel"></select>
+          </div>
+        </div>
+
+        <h2>Точные значения</h2>
+        <div class="card">
+          <div class="props__grid" style="max-width:420px">
+            <label class="field"><span>X окна</span><input type="number" id="pt-x" /></label>
+            <label class="field"><span>Y окна</span><input type="number" id="pt-y" /></label>
+            <label class="field"><span>Сторона, px</span><input type="number" id="pt-size" /></label>
+            <span></span>
+            <label class="field"><span>Дистанция, М</span><input type="number" step="0.01" id="pt-md" /></label>
+            <label class="field"><span>Дистанция, Ж</span><input type="number" step="0.01" id="pt-fd" /></label>
+            <label class="field"><span>Высота, М</span><input type="number" step="0.01" id="pt-mh" /></label>
+            <label class="field"><span>Высота, Ж</span><input type="number" step="0.01" id="pt-fh" /></label>
+          </div>
+          <div class="row">
+            <button class="btn" id="pt-stock">Вернуть штатные</button>
+            <span class="muted">штатно: окно 128×128 в точке 0,15</span>
+          </div>
+        </div>
+
+        <h2>Где это окажется</h2>
+        <div class="card">
+          <div class="pt-preview" id="pt-preview">
+            <div class="pt-preview__dlg"><span>панель состояния 353×151</span></div>
+            <div class="pt-preview__box" id="pt-box"><span id="pt-box-label"></span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= Шрифт ================= -->
+      <section class="view" data-view="font">
+        <h1>Шрифт</h1>
+        <p class="lede">Клиент берёт три гарнитуры из <code>l10n/&lt;язык&gt;/data/Fonts</code>.
+          Подменяем все три одним файлом; азиатская <code>CHU_2002.ttf</code> остаётся штатной,
+          иначе пропадут иероглифы.</p>
+        <div class="card">
+          <div class="row">
+            <label>Файл .ttf</label>
+            <input type="text" id="font-path" readonly placeholder="не выбран" />
+            <button class="btn" id="font-pick">Выбрать…</button>
+          </div>
+          <div class="row">
+            <label>Применять</label>
+            <label class="check"><input type="checkbox" id="font-on" /> подменять шрифт интерфейса</label>
+          </div>
+          <div class="row">
+            <label>Языки</label>
+            <div id="font-langs" class="chips"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="preview" id="font-preview">
+            <div class="preview__big">Абевега Дёрзкий 1234567890</div>
+            <div class="preview__mid">Спираль стрел II · Ловушка шипов IV · Меткий выстрел</div>
+            <div class="preview__small">Нанесение урона 328 · Сопротивление 1240 · Ускорение атаки 12%</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= Иконки умений ================= -->
+      <section class="view" data-view="skillicons">
+        <div class="sk__top">
+          <h1>Иконки</h1>
+          <div class="seg" id="si-kind">
+            <button data-kind="skills" class="is-on">Умения</button>
+            <button data-kind="items">Предметы</button>
+          </div>
+        </div>
+        <p class="lede" data-kind-only="skills">Иконка умения — семейство рангов (I, II, III…) и серые двойники, которые игра
+          показывает на откате. Дай одну картинку — программа соберёт из неё все ранги в цветах
+          родного семейства, с цифрами, и серые. Классы и названия — из таблиц умений клиента.</p>
+        <p class="lede" data-kind-only="items" hidden>Иконки предметов из <code>data/items/items.pak</code>: одна иконка —
+          часто у десятков предметов (все мечи одной серии, все цвета одной брони). Названия, тип и качество — из
+          таблицы предметов клиента. Картинка впишется в угол 40×40, как у родных.</p>
+        <div class="sk" data-kind-only="items" hidden>
+          <div class="sk__main">
+            <div class="card card--tight sk__filters">
+              <div class="row">
+                <input type="text" id="it-search" placeholder="Название предмета или имя файла" />
+                <select id="it-group" class="sel"></select>
+                <select id="it-quality" class="sel"></select>
+                <select id="it-scope" class="sel">
+                  <option value="used">у предметов</option>
+                  <option value="all">все иконки</option>
+                  <option value="unused">без предмета</option>
+                </select>
+              </div>
+              <div class="sk__checks">
+                <label class="check"><input type="checkbox" id="it-changed" /> только изменённые</label>
+                <span class="muted" id="it-count"></span>
+              </div>
+            </div>
+            <div class="skgrid" id="it-grid"><span class="muted">клиент не выбран</span></div>
+          </div>
+          <aside class="sk__card card" id="it-card">
+            <div class="muted">Выбери иконку — здесь будут предметы с ней и замена.</div>
+          </aside>
+        </div>
+        <div class="sk" data-kind-only="skills">
+          <div class="sk__main">
+            <div class="card card--tight sk__filters">
+              <div class="row">
+                <input type="text" id="si-search" placeholder="Название умения или имя файла" />
+                <select id="si-class" class="sel"></select>
+                <select id="si-scope" class="sel">
+                  <option value="used">умения классов</option>
+                  <option value="all">все иконки</option>
+                  <option value="unused">без умения</option>
+                </select>
+              </div>
+              <div class="row sk__chiprow">
+                <div class="chips" id="si-act"></div>
+                <div class="chips" id="si-sub"></div>
+              </div>
+              <div class="sk__checks">
+                <label class="check"><input type="checkbox" id="si-own" /> только свои (без общих с другими классами)</label>
+                <label class="check"><input type="checkbox" id="si-changed" /> только изменённые</label>
+                <span class="muted" id="si-count"></span>
+              </div>
+            </div>
+            <div class="skgrid" id="si-grid"><span class="muted">клиент не выбран</span></div>
+          </div>
+          <aside class="sk__card card" id="si-card">
+            <div class="muted">Выбери иконку — здесь будут все её ранги, серые двойники и замена.</div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ================= Бафы ================= -->
+      <section class="view" data-view="buffs">
+        <h1>Бафы</h1>
+        <p class="lede">Размер значков эффектов и сколько их в ряду. Место окон бафов выбирает сама
+          игра в обоих стилях — ни файлами, ни мышью их не сдвинуть (проверено в игре: клиенту AionEmpire
+          не хватает редактора HUD, который есть у официального). Раскладку внутри окна игра берёт из файлов.</p>
+        <div class="bf" id="bf-list"><span class="muted">клиент не выбран</span></div>
+      </section>
+
+      <!-- ================= Цифры урона ================= -->
+      <section class="view" data-view="hitnum">
+        <h1>Цифры урона</h1>
+        <p class="lede">Конструктор рисует цифры 0–9 в восьми цветах, плюс и минус и надписи «Крит!»,
+          «Блок!» и другие своим шрифтом, цветом и эффектами — и кладёт их вместо родных.
+          Размеры картинок берутся у родных; крупнее 110% картинка растёт вместе с текстом.</p>
+        <div class="hn">
+          <div class="hn__controls">
+            <div class="card">
+              <div class="row">
+                <label>Применять</label>
+                <label class="check"><input type="checkbox" id="hn-on" /> заменить цифры и надписи своими</label>
+              </div>
+              <div class="row">
+                <label>Шрифт</label>
+                <select id="hn-family" class="sel"></select>
+                <input type="text" id="hn-font" readonly placeholder="или свой .ttf / .otf" />
+                <button class="btn" id="hn-font-pick">Файл…</button>
+                <button class="btn btn--ghost" id="hn-font-clear" title="убрать свой шрифт">×</button>
+              </div>
+              <div class="row">
+                <label>Начертание</label>
+                <label class="check"><input type="checkbox" id="hn-italic" /> курсив</label>
+                <label class="check"><input type="checkbox" id="hn-bold" /> жирный</label>
+              </div>
+              <div class="row">
+                <label>Размер</label>
+                <span class="scrub">Цифры <input type="range" id="hn-scale" min="60" max="250" step="5" /><b id="hn-scale-v"></b></span>
+                <span class="scrub">Надписи <input type="range" id="hn-plate-scale" min="60" max="250" step="5" /><b id="hn-plate-scale-v"></b></span>
+              </div>
+            </div>
+
+            <h2>Цвета цифр</h2>
+            <div class="card">
+              <div class="hn__colors" id="hn-colors"></div>
+              <div class="row"><button class="btn btn--ghost" id="hn-colors-reset">Цвета как у родных</button></div>
+            </div>
+
+            <h2>Эффекты</h2>
+            <div class="card">
+              <div class="row">
+                <label>Градиент</label>
+                <label class="check"><input type="checkbox" id="hn-grad-on" /> верх другим цветом</label>
+                <label class="scrub scrub--color"><span>Цвет</span><span class="scrub__cc"><input type="color" id="hn-grad-color" /><input type="text" class="scrub__hex" maxlength="7" spellcheck="false" aria-label="Цвет градиента, hex" /></span></label>
+                <span class="scrub">Сила <input type="range" id="hn-grad-amount" min="0" max="100" /><b id="hn-grad-amount-v"></b></span>
+              </div>
+              <div class="row">
+                <label>Обводка</label>
+                <span class="scrub">Толщина <input type="range" id="hn-outline-width" min="0" max="4" step="0.5" /><b id="hn-outline-width-v"></b></span>
+                <label class="scrub scrub--color"><span>Цвет</span><span class="scrub__cc"><input type="color" id="hn-outline-color" /><input type="text" class="scrub__hex" maxlength="7" spellcheck="false" aria-label="Цвет обводки, hex" /></span></label>
+              </div>
+              <div class="row">
+                <label>Тень</label>
+                <span class="scrub">Вправо <input type="range" id="hn-shadow-dx" min="-3" max="3" step="0.5" /><b id="hn-shadow-dx-v"></b></span>
+                <span class="scrub">Вниз <input type="range" id="hn-shadow-dy" min="-3" max="3" step="0.5" /><b id="hn-shadow-dy-v"></b></span>
+                <span class="scrub">Размытие <input type="range" id="hn-shadow-blur" min="0" max="3" step="0.5" /><b id="hn-shadow-blur-v"></b></span>
+                <label class="scrub scrub--color"><span>Цвет</span><span class="scrub__cc"><input type="color" id="hn-shadow-color" /><input type="text" class="scrub__hex" maxlength="7" spellcheck="false" aria-label="Цвет тени, hex" /></span></label>
+                <span class="scrub">Плотность <input type="range" id="hn-shadow-alpha" min="0" max="100" /><b id="hn-shadow-alpha-v"></b></span>
+              </div>
+            </div>
+
+            <h2>Надписи</h2>
+            <div class="card">
+              <div class="row">
+                <label>Надписи</label>
+                <label class="check"><input type="checkbox" id="hn-plates-on" /> рисовать и надписи</label>
+              </div>
+              <div class="hn__plates" id="hn-plates"></div>
+              <div class="row">
+                <label>Цвет</label>
+                <label class="scrub scrub--color"><span>Красные</span><span class="scrub__cc"><input type="color" id="hn-plate-r" /><input type="text" class="scrub__hex" maxlength="7" spellcheck="false" aria-label="Красные надписи, hex" /></span></label>
+                <label class="scrub scrub--color"><span>Жёлтые</span><span class="scrub__cc"><input type="color" id="hn-plate-w" /><input type="text" class="scrub__hex" maxlength="7" spellcheck="false" aria-label="Жёлтые надписи, hex" /></span></label>
+              </div>
+              <div class="row">
+                <label>Значок</label>
+                <input type="text" id="hn-icon" readonly placeholder="без значка — только текст" />
+                <button class="btn" id="hn-icon-pick">Картинка…</button>
+                <button class="btn btn--ghost" id="hn-icon-clear" title="убрать значок">×</button>
+              </div>
+            </div>
+
+            <div class="card hn__foot">
+              <div class="row">
+                <button class="btn btn--primary" id="hn-stage">Подготовить к сборке</button>
+                <button class="btn btn--danger" id="hn-revert">Вернуть родные</button>
+                <button class="btn btn--ghost" id="hn-single">Картинки по одной…</button>
+              </div>
+              <div class="state" id="hn-state"></div>
+            </div>
+          </div>
+
+          <aside class="hn__preview card">
+            <div class="row">
+              <b class="hn__ptitle">Предпросмотр</b>
+              <label class="check"><input type="checkbox" id="hn-orig" /> показать родные</label>
+            </div>
+            <canvas id="hn-canvas" width="340" height="540"></canvas>
+            <div class="muted" id="hn-pnote" hidden></div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ================= Иконки ================= -->
+      <section class="view" data-view="icons">
+        <h1 id="icon-title">Картинки</h1>
+        <p class="lede" id="icon-lede"></p>
+        <div class="card card--tight">
+          <div class="row">
+            <input type="text" id="icon-search" placeholder="Поиск по имени" />
+            <button class="btn" id="icon-export">Выгрузить PNG</button>
+            <span class="muted" id="icon-count"></span>
+          </div>
+        </div>
+        <div class="icons" id="icon-grid"></div>
+      </section>
+
+      <!-- ================= Вид Aion 5.x ================= -->
+      <section class="view" data-view="v5">
+        <h1>Вид Aion 5.x</h1>
+        <p class="lede">Переносит внешность интерфейса из библиотеки <code>version5</code>:
+          каждой детали Classic подставляется картинка одноимённой детали пятой версии.
+          Имена не меняются, поэтому диалоги, умения и их названия остаются как были —
+          меняется только то, как всё нарисовано.</p>
+
+        <div class="card">
+          <div class="row">
+            <label>Применять</label>
+            <label class="check"><input type="checkbox" id="v5-on" /> перевести интерфейс на вид Aion 5.x</label>
+          </div>
+          <div id="v5-stats" class="summary"></div>
+        </div>
+
+        <h2>Как искать пары</h2>
+        <p class="lede">У части деталей имена в пятой версии записаны иначе. Каждое правило
+          можно включить или выключить — видно, сколько деталей оно добавляет и что именно.</p>
+        <div class="card">
+          <div id="v5-rules" class="v5rules"></div>
+          <details id="v5-extra-wrap">
+            <summary class="muted">показать, что подобрали правила</summary>
+            <div id="v5-extra" class="v5extra"></div>
+          </details>
+        </div>
+
+        <h2>Что изменится</h2>
+        <div class="card">
+          <div id="v5-cats" class="v5cats"></div>
+        </div>
+
+        <h2>Что останется прежним</h2>
+        <p class="lede">У этих деталей пары в пятой версии нет — в игре они будут выглядеть
+          по-старому. Их можно оставить как есть или дорисовать вручную в разделе
+          «Скины элементов».</p>
+        <div class="card">
+          <div id="v5-rest" class="v5cats"></div>
+        </div>
+
+        <h2>До и после</h2>
+        <div class="card">
+          <div id="v5-samples" class="v5samples"><span class="muted">считаю…</span></div>
+        </div>
+      </section>
+
+      <!-- ================= Вид официального Classic ================= -->
+      <section class="view" data-view="classic">
+        <h1>Вид официального Classic</h1>
+        <p class="lede">Берёт внешность интерфейса из официального клиента Aion Classic и
+          переносит в твой. Детали находятся по точному имени в одноимённой библиотеке скинов,
+          поэтому диалоги, умения и их названия остаются как были — меняется только то, как
+          всё нарисовано. Официальный клиент только читается: нужное из него один раз
+          импортируется в папку программы, дальше он не нужен.</p>
+
+        <div class="card">
+          <div class="row">
+            <label>Официальный клиент</label>
+            <input type="text" id="cl-path" readonly placeholder="не выбран" />
+            <button class="btn" id="cl-pick">Импортировать…</button>
+          </div>
+          <div class="row">
+            <label>Импорт</label>
+            <div id="cl-import-state" class="state">нет</div>
+            <button class="btn btn--ghost" id="cl-reimport" style="display:none">Обновить импорт</button>
+          </div>
+          <div class="row">
+            <label>Состояние</label>
+            <div id="cl-state" class="state">папка не выбрана</div>
+          </div>
+          <div class="row">
+            <label>Применять</label>
+            <label class="check"><input type="checkbox" id="cl-on" /> перенести вид официального Classic</label>
+          </div>
+          <div id="cl-stats" class="summary"></div>
+        </div>
+
+        <div class="notice" id="cl-v5-note" style="display:none">
+          Включён ещё и вид Aion 5.x. Где у детали есть оба варианта, побеждает официальный
+          Classic — он ложится сверху. Ручные правки из «Скинов элементов» сильнее обоих.
+        </div>
+
+        <p class="lede">Часть атласов у официального клиента перерисована под теми же именами
+          (<code>v4_common</code>, <code>v4_popup1</code>…). Вместо своих их не подкладываем —
+          на них смотрят и другие окна, у них разъехались бы координаты. Атласы донора кладутся
+          рядом отдельным паком <code>textures/ui/zz_classic_look.pak</code>, и на них
+          переводятся только перенесённые детали. «Вернуть как было» этот пак убирает.</p>
+
+        <h2>Откуда брать вид</h2>
+        <p class="lede">Новый плоский вид официальный клиент рисует скинами <code>v3_*</code>,
+          которые зовут только его собственные окна. Наши окна просят <code>v4_*</code>, поэтому
+          пару ищем по имени. Второй источник — детали с тем же именем, которые у официального
+          клиента перерисованы. Если у детали есть оба варианта, берётся новый вид.
+          В счёт идёт только то, что на экране действительно изменится — сверено по пикселям.</p>
+        <div class="card">
+          <div id="cl-rules" class="v5rules"></div>
+        </div>
+
+        <h2>Что переносить</h2>
+        <p class="lede">Сними всё и оставь одну группу — так удобно проверить в игре по частям.</p>
+        <div class="card">
+          <div class="row">
+            <button class="btn btn--ghost" id="cl-all">Всё</button>
+            <button class="btn btn--ghost" id="cl-none">Ничего</button>
+            <span class="muted" id="cl-picked"></span>
+          </div>
+          <div id="cl-cats" class="clcats"></div>
+        </div>
+
+        <h2>Окна HUD</h2>
+        <p class="lede">Новый HUD официальный клиент рисует не другими картинками, а другими
+          окнами — у него в наборе <b>s2</b>: панель умений 541×140, полоса опыта во всю ширину,
+          новые полосы HP/MP (его s1 байт в байт как у тебя). Окно берётся официальное,
+          но приводится к тому, что умеет твой клиент: виджеты, которых твой код не знает,
+          убираются (иначе висели бы мёртвыми полосами), а твои, которых нет у официального,
+          возвращаются на место.</p>
+        <div class="notice">
+          Официальные окна ставятся в один из наборов — выбор ниже, «Куда ставить новый HUD».
+          <b>«Стиль Aion» (s1)</b>: полосы с 3D-портретом, панель умений, меню и карта внизу,
+          цель — вверху по центру. <b>«Обычный стиль» (s2)</b>: полосы вверху слева, и игра
+          пристёгивает к ним цель — сдвинуть её файлами нельзя. Второй набор остаётся прежним.
+          Стиль переключается в игре: <b>Настройки → Игра → «Стиль интерфейса»</b>.
+          «Цель», «Группа» и ряды панели умений общие для обоих наборов. Карта и меню остаются
+          твоими окнами в официальном виде: код игры ищет в них свои кнопки.
+        </div>
+        <div class="card">
+          <div class="row">
+            <label>Применять</label>
+            <label class="check"><input type="checkbox" id="cl-hud-on" /> перенести окна HUD официального Classic</label>
+          </div>
+          <div id="cl-hud" class="clhud"><span class="muted">выбери папку официального клиента</span></div>
+        </div>
+
+        <h2>Карты</h2>
+        <p class="lede">У официального клиента часть карт перерисована. Но под теми же именами
+          зон часто лежит <b>другая местность</b> (у тебя в <code>lc1</code> озеро, у официального —
+          застройка): мир ты видишь из своих файлов уровней, и такая карта с ним не совпадёт. Поэтому
+          тайлы сравниваются по планировке, и зона меняется только целиком и только если планировка
+          та же — то есть перекрашена.</p>
+        <div class="card">
+          <div class="row">
+            <label>Применять</label>
+            <label class="check"><input type="checkbox" id="cl-maps-on" /> заменить перекрашенные карты</label>
+          </div>
+          <div id="cl-maps" class="clmaps"><span class="muted">считаю…</span></div>
+        </div>
+
+        <h2>По библиотекам</h2>
+        <div class="card">
+          <div id="cl-libs" class="cllibs"></div>
+        </div>
+
+        <h2>До и после</h2>
+        <div class="card">
+          <div id="cl-samples" class="v5samples"><span class="muted">выбери папку официального клиента</span></div>
+        </div>
+      </section>
+
+      <!-- ================= Скины ================= -->
+      <!-- ================= Вид интерфейса: стиль групп и мини-карта (временно отдельно от «Интерфейса») ================= -->
+      <section class="view" data-view="look">
+        <h1>Вид интерфейса</h1>
+        <p class="lede">Для каждой группы деталей — откуда брать внешность: свой (как в игре сейчас),
+          официальный Classic или Aion 5.x. Группы смешиваются как угодно. Как это выглядит на экране —
+          в разделе «Интерфейс».</p>
+        <div class="lk">
+          <div class="card lk__top" id="lk-top"></div>
+          <div class="lk__bar">
+            <span class="lk__label">Всё сразу</span>
+            <div class="seg">
+              <button data-all="own">своё</button>
+              <button data-all="classic">официальный Classic</button>
+              <button data-all="v5">Aion 5.x</button>
+            </div>
+            <span class="lk__state" id="lk-state"></span>
+          </div>
+          <div class="lk__grid" id="lk-grid"></div>
+        </div>
+      </section>
+
+      <!-- ================= Карты: своя картинка вместо большой карты зоны ================= -->
+      <section class="view" data-view="maps">
+        <div class="mp">
+          <aside class="mp__side">
+            <div class="ed__head">
+              <b>Карты</b>
+              <input type="text" id="mp-search" placeholder="Поиск зоны" />
+            </div>
+            <div class="mp__list" id="mp-list"><span class="muted pad">клиент не выбран</span></div>
+          </aside>
+          <div class="mp__main" id="mp-main">
+            <div class="muted pad">Выбери зону слева.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= Интерфейс: экран предпросмотра + карточка элемента ================= -->
+      <section class="view" data-view="editor">
+        <div class="ed">
+          <aside class="ed__side">
+            <div class="ed__head">
+              <b>Интерфейс</b>
+              <div class="seg" id="ed-tabs">
+                <button data-tab="windows" class="is-on">Окна</button>
+                <button data-tab="elements">Элементы</button>
+              </div>
+              <input type="text" id="ed-search" placeholder="Поиск" />
+            </div>
+            <div class="ed__list" id="ed-list"></div>
+          </aside>
+          <div class="ed__stage">
+            <div class="ed__screen" id="ed-screen"><canvas id="ed-canvas"></canvas></div>
+            <div class="ed__bar">
+              <span class="state" id="ed-state"></span>
+              <span class="ed__sep"></span>
+              <button class="ed__tool" id="ed-zoom-out" title="Уменьшить">−</button>
+              <button class="ed__tool ed__zoom" id="ed-zoom-v" title="Весь экран">—</button>
+              <button class="ed__tool" id="ed-zoom-in" title="Увеличить">+</button>
+              <button class="ed__tool ed__tool--light" id="ed-fit">Весь экран</button>            </div>
+            <div class="ed__hint">Клик — выбрать элемент · колесо — масштаб · перетащить — сдвинуть</div>
+          </div>
+          <aside class="ed__props" id="ed-props">
+            <div class="muted pad">Выбери элемент на экране или в списке слева.</div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="view" data-view="skins">
+        <h1>Скины элементов</h1>
+        <p class="lede">Каждая деталь интерфейса — запись в библиотеке скинов: имя, атлас и
+          прямоугольник в нём. Можно перенаправить любую деталь на другой атлас или другой
+          его кусок — в том числе на <code>v5_*</code>, картинки интерфейса Aion 5.x, которые
+          в клиенте уже лежат.</p>
+        <div class="notice">
+          Целиком на <code>version5</code> клиент не переключить: имена скинов там почти не
+          совпадают с тем, что просят диалоги Classic (общих 36 из 1306 и 2665). Поэтому не
+          «включить другую версию», а перенести из неё нужные детали.
+        </div>
+
+        <div class="card card--tight">
+          <div class="row">
+            <input type="text" id="skin-search" placeholder="Поиск по имени или категории, например v4_button" />
+            <select id="skin-lib" class="sel"></select>
+            <span class="muted" id="skin-count"></span>
+          </div>
+        </div>
+
+        <div class="skins">
+          <div class="skins__list" id="skin-list"></div>
+          <aside class="skins__props" id="skin-props">
+            <div class="muted pad">Выбери деталь слева.</div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ================= Сборка ================= -->
+      <section class="view" data-view="apply">
+        <h1>Сборка</h1>
+        <p class="lede">Игра читает паки только при запуске — после установки перезапусти клиент.</p>
+        <div class="notice">
+          Если менял раскладку панелей: после запуска зайди в <b>Настройки</b> и нажми
+          <b>«Расположить окна по умолчанию»</b>. Клиент хранит своё расположение окон
+          отдельно и без сброса перекрывает им наши координаты.
+        </div>
+        <div class="card">
+          <div id="apply-summary" class="summary"></div>
+        </div>
+        <h2>Разметка окон HUD</h2>
+        <div class="card">
+          <div class="row">
+            <label class="check"><input type="checkbox" id="calib-on" /> обвести окна HUD цветными рамками и увеличить их</label>
+          </div>
+          <div class="bf__note">Для конструктора раскладки: одна сборка с разметкой и скриншот из игры показывают,
+            за какой угол игра держит каждое окно и куда оно растёт. Рамки видны только в игре; после скриншота
+            выключи и собери заново. Окна увеличены на 200×100 и прозрачны.</div>
+          <div class="calib__legend" id="calib-legend"></div>
+        </div>
+        <h2>Журнал</h2>
+        <pre class="log" id="apply-log">пока пусто</pre>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <!-- ================= Мастер первого запуска ================= -->
+  <div class="wz" id="wz" hidden>
+    <div class="wz__box">
+      <div class="wz__steps" id="wz-steps"></div>
+      <div class="wz__body" id="wz-body"></div>
+      <div class="wz__foot">
+        <button class="btn btn--ghost" id="wz-skip">Пропустить мастер</button>
+        <span class="wz__spacer"></span>
+        <button class="btn" id="wz-back">Назад</button>
+        <button class="btn btn--primary" id="wz-next">Дальше</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= Сборка: индикатор, потом «Успешно» или ошибка ================= -->
+  <div class="wz" id="bld" hidden>
+    <div class="wz__box bld" role="dialog" aria-modal="true" aria-labelledby="bld-title" aria-live="polite">
+      <div class="bld__body">
+        <div class="bld__icon" id="bld-icon" data-state="run">
+          <span class="bld__spin" aria-hidden="true"></span>
+          <svg class="bld__ok" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg class="bld__bad" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+        </div>
+        <h2 id="bld-title">Собираю интерфейс…</h2>
+        <p id="bld-text">Не закрывай программу и не запускай игру, пока идёт сборка.</p>
+        <div class="bld__step" id="bld-step"></div>
+      </div>
+      <div class="wz__foot" id="bld-foot" hidden>
+        <button class="btn btn--ghost" id="bld-log">Журнал сборки</button>
+        <span class="wz__spacer"></span>
+        <button class="btn btn--primary" id="bld-ok">Готово</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= Пресет: сохранить / переименовать / подтвердить ================= -->
+  <div class="wz" id="pdlg" hidden>
+    <form class="wz__box pdlg" id="pdlg-form" autocomplete="off">
+      <div class="wz__body">
+        <h2 id="pdlg-title">Сохранить пресет</h2>
+        <p id="pdlg-text" hidden></p>
+        <label class="field" id="pdlg-name-f"><span>Название</span>
+          <input type="text" id="pdlg-name" maxlength="80" placeholder="Например, PvP — крупные цифры" /></label>
+        <label class="field" id="pdlg-desc-f"><span>Описание</span>
+          <textarea id="pdlg-desc" maxlength="600" rows="4" placeholder="Что в нём настроено — необязательно"></textarea></label>
+      </div>
+      <div class="wz__foot">
+        <span class="wz__spacer"></span>
+        <button type="button" class="btn btn--ghost" id="pdlg-cancel">Отмена</button>
+        <button type="submit" class="btn btn--primary" id="pdlg-ok">Сохранить</button>
+      </div>
+    </form>
+  </div>
+
+  <script src="scrubber.js"></script>
+  <script src="app.js"></script>
+  <script src="navigation.js"></script>
+  <script src="client.js"></script>
+  <script src="build-ui.js"></script>
+  <script src="hitnum.js"></script>
+  <script src="editor.js"></script>
+  <script src="buffs.js"></script>
+  <script src="look.js"></script>
+  <script src="home.js"></script>
+  <script src="maps.js"></script>
+  <script src="itemicons.js"></script>
+  <script src="motion.js"></script>
+  <script src="presets.js"></script>
+</body>
+</html>
+
+
+
+
+

@@ -1,0 +1,48 @@
+{
+  "name": "aion-ui-builder",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Сборщик интерфейса Aion Classic: раскладка HUD, шрифт, иконки — без ручной правки паков",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "selftest": "node tools/selftest.js",
+    "dump": "node tools/dump.js",
+    "check": "npm run selftest && node tools/ui-selftest.js && node tools/roundtrip.js && node tools/security-selftest.js",
+    "build:dir": "electron-builder --dir",
+    "build:win": "electron-builder --win nsis"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "author": "Awake",
+  "devDependencies": {
+    "electron": "^43.4.1"
+  },
+  "build": {
+    "appId": "com.awake.aion-ui-builder",
+    "productName": "Aion UI Builder",
+    "asar": true,
+    "npmRebuild": false,
+    "files": [
+      "src/**/*",
+      "package.json",
+      "icon.ico",
+      "!src/ui/mock.js",
+      "!**/*.map"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}
