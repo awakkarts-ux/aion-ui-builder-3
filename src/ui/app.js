@@ -24,6 +24,40 @@ const state = {
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
 
+async function initUpdates() {
+  const version = $('#app-version');
+  const button = $('#app-update');
+  if (!version || !button || !window.api.update) return;
+  const info = await window.api.update.info();
+  version.textContent = `v${info.version}`;
+  const setStatus = (s) => {
+    if (s.state === 'available') {
+      button.hidden = false;
+      button.disabled = false;
+      button.textContent = `Обновить до v${s.version}`;
+      button.dataset.state = 'available';
+    } else if (s.state === 'downloading') {
+      button.hidden = false;
+      button.disabled = true;
+      button.textContent = `Загрузка ${Math.round(s.percent || 0)}%`;
+    } else if (s.state === 'ready') {
+      button.hidden = false;
+      button.disabled = false;
+      button.textContent = 'Перезапустить и обновить';
+      button.dataset.state = 'ready';
+    }
+  };
+  window.api.update.onStatus(setStatus);
+  button.onclick = () => guard(async () => {
+    if (button.dataset.state === 'ready') return window.api.update.install();
+    await window.api.update.download();
+    button.disabled = true;
+    button.textContent = 'Загрузка…';
+  });
+}
+
+initUpdates();
+
 function toast(msg, bad) {
   const el = $('#toast');
   el.textContent = msg;

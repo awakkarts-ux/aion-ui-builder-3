@@ -5,6 +5,13 @@ const { contextBridge, ipcRenderer } = require('electron');
 const call = (channel, ...args) => ipcRenderer.invoke(channel, ...args);
 
 contextBridge.exposeInMainWorld('api', {
+  update: {
+    info: () => call('update:info'),
+    check: () => call('update:check'),
+    download: () => call('update:download'),
+    install: () => call('update:install'),
+    onStatus: (fn) => ipcRenderer.on('update:status', (_e, status) => fn(status)),
+  },
   window: {
     minimize: () => call('window:minimize'),
     toggle: () => call('window:toggle'),

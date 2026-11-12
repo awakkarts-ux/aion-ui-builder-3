@@ -82,6 +82,9 @@ code {
 .titlebar__actions .pset { width: 250px; }
 .titlebar__actions .pset__btn { min-height: 32px; }
 .titlebar__actions > .btn { min-height: 32px; padding: 8px 18px; white-space: nowrap; }
+.app-version { color: var(--text-faint); font: 11px var(--mono); white-space: nowrap; }
+.btn--update { background: var(--yellow); color: #171719; font-weight: 700; }
+.btn--update:hover { filter: brightness(1.08); }
 .titlebar__actions .pset__menu {
   top: calc(100% + 8px);
   bottom: auto;

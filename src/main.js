@@ -41,25 +41,24 @@ let client = null;
 
 function setupAutoUpdates() {
   if (!app.isPackaged) return;
-  autoUpdater.autoDownload = true;
+  autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.logger = null;
-  autoUpdater.on('error', () => {});
-  autoUpdater.on('update-downloaded', async () => {
-    if (!win || win.isDestroyed()) return;
-    const result = await dialog.showMessageBox(win, {
-      type: 'info',
-      buttons: ['Перезапустить сейчас', 'Позже'],
-      defaultId: 0,
-      cancelId: 1,
-      title: 'Доступно обновление',
-      message: 'Новая версия Aion UI Builder скачана.',
-      detail: 'Перезапустите программу, чтобы установить обновление.',
-    });
-    if (result.response === 0) autoUpdater.quitAndInstall();
-  });
-  setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 2500);
+  autoUpdater.on('checking-for-update', () => win?.webContents.send('update:status', { state: 'checking' }));
+  autoUpdater.on('update-available', (info) => win?.webContents.send('update:status', { state: 'available', version: info.version }));
+  autoUpdater.on('update-not-available', (info) => win?.webContents.send('update:status', { state: 'current', version: info.version }));
+  autoUpdater.on('download-progress', (p) => win?.webContents.send('update:status', { state: 'downloading', percent: p.percent }));
+  autoUpdater.on('update-downloaded', (info) => win?.webContents.send('update:status', { state: 'ready', version: info.version }));
+  autoUpdater.on('error', (error) => win?.webContents.send('update:status', { state: 'error', message: error.message }));
+  const check = () => autoUpdater.checkForUpdates().catch(() => {});
+  setTimeout(check, 2500);
+  setInterval(check, 3 * 60 * 60 * 1000);
 }
+
+ipcMain.handle('update:info', () => ({ version: app.getVersion(), packaged: app.isPackaged }));
+ipcMain.handle('update:check', () => app.isPackaged ? autoUpdater.checkForUpdates() : { updateInfo: null });
+ipcMain.handle('update:download', () => autoUpdater.downloadUpdate());
+ipcMain.handle('update:install', () => autoUpdater.quitAndInstall());
 
 const userDir = () => app.getPath('userData');
 const configPath = () => path.join(userDir(), 'config.json');
