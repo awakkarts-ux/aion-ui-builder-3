@@ -35,7 +35,13 @@ code {
   display: flex;
   height: 40px;
   background: var(--bg-base);
+  -webkit-app-region: drag;
 }
+
+.titlebar__brand,
+.titlebar > .pset,
+.titlebar__actions,
+.titlebar__buttons { -webkit-app-region: no-drag; }
 
 .titlebar__drag {
   flex: 1;

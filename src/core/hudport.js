@@ -876,7 +876,11 @@ function plan(client, donor, lang, opts) {
       place(ours, root, set === 's1' && rule && (rule.bottomBar || rule.fullWidth) ? null : rule, ctx);
       row.dropped = a.dropped;
       row.grafted = a.grafted;
-      row.data = bxml.serialize(root, strings);
+      // The donor's string table belongs to the official client and can miss
+      // localised labels used by our client (Battle Pass and other screens).
+      // Keep the original table as the base; node text is already decoded by
+      // bxml.parse and will be interned into the resulting table.
+      row.data = bxml.serialize(root, ourParsed.strings);
     }
     row.frame = [ours.getFrame(), result.getFrame()];
     if (!row.on) continue;
