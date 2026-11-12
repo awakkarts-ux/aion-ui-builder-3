@@ -16,12 +16,33 @@ const bfStore = () => {
 
 async function loadBuffs(force) {
   if (!state.ready) return;
+  renderBuffMoveControls();
   if (!bf.info || force) {
     $('#bf-list').innerHTML = '<span class="muted">читаю окна бафов…</span>';
     bf.info = await guard(() => window.api.buffs.info());
     if (!bf.info) { $('#bf-list').innerHTML = '<span class="muted">не удалось прочитать</span>'; return; }
   }
   renderBuffs();
+}
+
+function renderBuffMoveControls() {
+  const box = $('#bf-move-controls');
+  if (!box) return;
+  const free = state.profile.hudFree || {};
+  box.innerHTML = [['buffs', 'Бафы'], ['debuffs', 'Дебафы']].map(([key, label]) =>
+    `<label class="check"><input type="checkbox" data-bf-free="${key}" ${free[key] ? 'checked' : ''} /> ${label}</label>`).join('');
+  box.querySelectorAll('[data-bf-free]').forEach((input) => {
+    input.onchange = () => {
+      const next = Object.assign({}, state.profile.hudFree || {});
+      if (input.checked) next[input.dataset.bfFree] = true;
+      else delete next[input.dataset.bfFree];
+      if (Object.keys(next).length) state.profile.hudFree = next;
+      else delete state.profile.hudFree;
+      saveProfile();
+      renderBuffs();
+      renderSummary();
+    };
+  });
 }
 
 /** Окно бафов таскается мышью («Двигать мышью в игре»)? Ключи — как в core/hud.js FREE_WINDOWS. */
