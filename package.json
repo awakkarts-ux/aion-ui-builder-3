@@ -1,6 +1,6 @@
 {
   "name": "aion-ui-builder",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
   "description": "Сборщик интерфейса Aion Classic: раскладка HUD, шрифт, иконки — без ручной правки паков",
   "main": "src/main.js",
