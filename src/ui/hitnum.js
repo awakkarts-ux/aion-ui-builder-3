@@ -25,6 +25,7 @@ const HN_PLATES = [['critical', 'Крит!'], ['block', 'Блок!'], ['dodge', 
 const HN_FAMILIES = ['Georgia', 'Times New Roman', 'Palatino Linotype', 'Cambria', 'Constantia',
   'Arial', 'Arial Black', 'Segoe UI', 'Trebuchet MS', 'Verdana', 'Impact', 'Consolas'];
 const HN_CUSTOM = 'hn-custom';
+const HN_COMPONENTS = [['digit:white','Обычный белый'],['digit:yellow','Обычный жёлтый'],['digit:orange','Обычный оранжевый'],['digit:red','Обычный красный'],['digit:violet','Обычный фиолетовый'],['digit:blue','Обычный синий'],['digit:green','Обычный зелёный'],['digit:gray','Обычный серый'],['sign:plus','Плюс'],['sign:minus','Минус'],['plate:critical','Крит'],['plate:block','Блок'],['plate:dodge','Уворот'],['plate:parry','Парирование'],['plate:resist','Отражение']];
 
 const hn = {
   rows: null, // строки набора: { key, short, pak }
@@ -39,7 +40,7 @@ const hn = {
 function hnDefaults() {
   return {
     enabled: false, font: '', family: 'Georgia', italic: true, bold: true, scale: 100, plateScale: 100,
-    colors: {},
+    colors: {}, scales: {},
     gradient: { on: false, color: '#ffffff', amount: 45 },
     outline: { width: 0, color: '#000000' },
     shadow: { dx: 1, dy: 1.5, blur: 0.5, color: '#000000', alpha: 75 },
@@ -61,6 +62,7 @@ function hnState() {
   for (const k of ['gradient', 'outline', 'shadow', 'plates']) s[k] = Object.assign({}, d[k], p && p[k]);
   s.plates.text = Object.assign({}, s.plates.text);
   s.colors = Object.assign({}, s.colors);
+  s.scales = Object.assign({}, s.scales);
   s.keys = Array.isArray(s.keys) ? s.keys : [];
   state.profile.hitnum = s;
   hnNormalized.add(s);
@@ -74,6 +76,9 @@ function hnSig(s) {
 }
 
 const hnColor = (s, c) => s.colors[c] || hn.defColors[c] || '#ffffff';
+const hnComponentKey = (what) => what.kind === 'plate' ? `plate:${what.plate}` : `${what.kind}:${what.color || what.text}`;
+const hnScale = (s, what) => s.scales[hnComponentKey(what)] || (what.kind === 'plate' ? s.plateScale : s.scale);
+const hnComponentColor = (s, what) => what.kind === 'plate' ? (what.variant === 'r' ? s.plates.r : s.plates.w) : hnColor(s, what.color);
 const hnPlateText = (s, p) => (p in s.plates.text ? s.plates.text[p] : (HN_PLATES.find((x) => x[0] === p) || [p, p])[1]);
 
 /** Что за картинка: цифра, знак или надпись. */
@@ -219,7 +224,7 @@ function hnPlatePx(s, icon) {
     if (!what || what.kind !== 'plate' || !size) continue;
     const text = hnPlateText(s, what.plate);
     if (!text) continue;
-    const [w, h] = hnCanvas(size, s.plateScale);
+    const [w, h] = hnCanvas(size, hnScale(s, { kind: 'plate', plate: what.plate }));
     const m = hnMeasure(s, text);
     const textH = m.a + m.d;
     const fullW = m.l + m.r + (icon ? textH * 1.15 * (icon.width / icon.height) + textH * 0.15 : 0);
@@ -242,15 +247,15 @@ function hnRenderAll(s) {
       if (!s.plates.on) continue;
       const text = hnPlateText(s, what.plate);
       if (!text) continue;
-      const [w, h] = hnCanvas(size, s.plateScale);
+      const [w, h] = hnCanvas(size, hnScale(s, { kind: 'plate', plate: what.plate }));
       out.set(r.key, hnDraw(s, text, w, h, what.variant === 'r' ? s.plates.r : s.plates.w, 'right',
         platePx.get(h), icon));
       continue;
     }
-    const [w, h] = hnCanvas(size, s.scale);
+    const [w, h] = hnCanvas(size, hnScale(s, what));
     const sk = w + 'x' + h;
     if (!digitPx.has(sk)) digitPx.set(sk, hnDigitPx(s, w, h));
-    out.set(r.key, hnDraw(s, what.text, w, h, hnColor(s, what.color), 'center', digitPx.get(sk)));
+    out.set(r.key, hnDraw(s, what.text, w, h, hnComponentColor(s, what), 'center', digitPx.get(sk)));
   }
   return out;
 }
@@ -382,6 +387,14 @@ function hnFillForm(s) {
     $(sel).value = obj(s)[key];
     $(sel + '-v').textContent = obj(s)[key] + unit;
   }
+  const comp = $('#hn-component');
+  if (!comp.options.length) comp.innerHTML = HN_COMPONENTS.map(([k, n]) => `<option value="${k}">${n}</option>`).join('');
+  const ck = comp.value || HN_COMPONENTS[0][0];
+  const fallback = ck.startsWith('plate:') ? s.plateScale : s.scale;
+  $('#hn-component-scale').value = s.scales[ck] || fallback;
+  $('#hn-component-scale-v').textContent = (s.scales[ck] || fallback) + '%';
+  const [kind, value] = ck.split(':');
+  $('#hn-component-color').value = kind === 'plate' ? (value === 'critical' ? s.plates.r : s.plates.w) : hnColor(s, value);
   $('#hn-grad-on').checked = !!s.gradient.on;
   $('#hn-grad-color').value = s.gradient.color;
   $('#hn-outline-color').value = s.outline.color;
@@ -422,6 +435,9 @@ function hnBind() {
   on('#hn-grad-color', 'oninput', (s, t) => { s.gradient.color = t.value; });
   on('#hn-outline-color', 'oninput', (s, t) => { s.outline.color = t.value; });
   on('#hn-shadow-color', 'oninput', (s, t) => { s.shadow.color = t.value; });
+  on('#hn-component-scale', 'oninput', (s, t) => { s.scales[$('#hn-component').value] = Number(t.value); $('#hn-component-scale-v').textContent = t.value + '%'; });
+  $('#hn-component').onchange = () => { hnFillForm(hnState()); };
+  $('#hn-component-color').oninput = (e) => { const [kind, value] = $('#hn-component').value.split(':'); if (kind === 'plate') { if (value === 'critical') hnState().plates.r = e.target.value; else hnState().plates.w = e.target.value; } else hnState().colors[value] = e.target.value; hnChanged(); };
   on('#hn-plates-on', 'onchange', (s, t) => { s.plates.on = t.checked; });
   on('#hn-plate-r', 'oninput', (s, t) => { s.plates.r = t.value; });
   on('#hn-plate-w', 'oninput', (s, t) => { s.plates.w = t.value; });
