@@ -1,6 +1,6 @@
 {
   "name": "aion-ui-builder",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Сборщик интерфейса Aion Classic: раскладка HUD, шрифт, иконки — без ручной правки паков",
   "main": "src/main.js",
@@ -51,6 +51,15 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "awakkarts-ux",
+      "repo": "aion-ui-builder-3",
+      "releaseType": "release"
     }
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11"
   }
 }

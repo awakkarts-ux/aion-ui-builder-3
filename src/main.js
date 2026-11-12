@@ -1,6 +1,7 @@
 'use strict';
 
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const fs = require('fs');
 const path = require('path');
 const { Worker } = require('worker_threads');
@@ -37,6 +38,28 @@ const DEFAULT_ROOTS = [
 
 let win = null;
 let client = null;
+
+function setupAutoUpdates() {
+  if (!app.isPackaged) return;
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.logger = null;
+  autoUpdater.on('error', () => {});
+  autoUpdater.on('update-downloaded', async () => {
+    if (!win || win.isDestroyed()) return;
+    const result = await dialog.showMessageBox(win, {
+      type: 'info',
+      buttons: ['Перезапустить сейчас', 'Позже'],
+      defaultId: 0,
+      cancelId: 1,
+      title: 'Доступно обновление',
+      message: 'Новая версия Aion UI Builder скачана.',
+      detail: 'Перезапустите программу, чтобы установить обновление.',
+    });
+    if (result.response === 0) autoUpdater.quitAndInstall();
+  });
+  setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 2500);
+}
 
 const userDir = () => app.getPath('userData');
 const configPath = () => path.join(userDir(), 'config.json');
@@ -164,6 +187,7 @@ function createWindow() {
 
 app.whenReady().then(() => {
   createWindow();
+  setupAutoUpdates();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
