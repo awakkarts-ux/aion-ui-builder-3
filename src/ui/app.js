@@ -26,8 +26,9 @@ const $$ = (sel) => [...document.querySelectorAll(sel)];
 
 async function initUpdates() {
   const version = $('#app-version');
+  const check = $('#app-check-update');
   const button = $('#app-update');
-  if (!version || !button || !window.api.update) return;
+  if (!version || !check || !button || !window.api.update) return;
   const info = await window.api.update.info();
   version.textContent = `v${info.version}`;
   const setStatus = (s) => {
@@ -48,6 +49,12 @@ async function initUpdates() {
     }
   };
   window.api.update.onStatus(setStatus);
+  check.onclick = () => guard(async () => {
+    check.disabled = true;
+    check.textContent = 'Проверка…';
+    await window.api.update.check();
+    setTimeout(() => { check.disabled = false; check.textContent = 'Проверить обновления'; }, 1200);
+  });
   button.onclick = () => guard(async () => {
     if (button.dataset.state === 'ready') return window.api.update.install();
     await window.api.update.download();
