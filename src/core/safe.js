@@ -25,14 +25,16 @@ function assertImage(width, height, rgba, label = 'image') {
   if (width > 8192 || height > 8192 || width * height > 16_777_216) {
     throw new RangeError(`${label} is too large`);
   }
-  const bytes = Buffer.isBuffer(rgba) ? rgba.length : ArrayBuffer.isView(rgba) ? rgba.byteLength : -1;
+  const bytes = Buffer.isBuffer(rgba) ? rgba.length : ArrayBuffer.isView(rgba) ? rgba.byteLength : Array.isArray(rgba) ? rgba.length : -1;
   if (bytes !== width * height * 4) throw new RangeError(`${label} RGBA size does not match dimensions`);
+  if (Array.isArray(rgba)) return Buffer.from(rgba);
   return Buffer.isBuffer(rgba) ? rgba : Buffer.from(rgba.buffer, rgba.byteOffset, rgba.byteLength);
 }
 
 function assertRgbaBytes(rgba, maxBytes = 64 * 64 * 4, label = 'RGBA') {
-  const bytes = Buffer.isBuffer(rgba) ? rgba.length : ArrayBuffer.isView(rgba) ? rgba.byteLength : -1;
+  const bytes = Buffer.isBuffer(rgba) ? rgba.length : ArrayBuffer.isView(rgba) ? rgba.byteLength : Array.isArray(rgba) ? rgba.length : -1;
   if (bytes < 4 || bytes > maxBytes || bytes % 4 !== 0) throw new RangeError(`${label} buffer is invalid`);
+  if (Array.isArray(rgba)) return Buffer.from(rgba);
   return Buffer.isBuffer(rgba) ? rgba : Buffer.from(rgba.buffer, rgba.byteOffset, rgba.byteLength);
 }
 
