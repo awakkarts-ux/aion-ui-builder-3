@@ -58,7 +58,8 @@ function setupAutoUpdates() {
 ipcMain.handle('update:info', () => ({ version: app.getVersion(), packaged: app.isPackaged }));
 ipcMain.handle('update:check', () => app.isPackaged ? autoUpdater.checkForUpdates() : { updateInfo: null });
 ipcMain.handle('update:download', () => autoUpdater.downloadUpdate());
-ipcMain.handle('update:install', () => autoUpdater.quitAndInstall());
+// Тихая установка поверх (папку берёт прежнюю) и сразу запуск новой версии.
+ipcMain.handle('update:install', () => setImmediate(() => autoUpdater.quitAndInstall(true, true)));
 
 const userDir = () => app.getPath('userData');
 const configPath = () => path.join(userDir(), 'config.json');

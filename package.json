@@ -1,6 +1,6 @@
 {
   "name": "aion-ui-builder",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "private": true,
   "description": "Сборщик интерфейса Aion Classic: раскладка HUD, шрифт, иконки — без ручной правки паков",
   "main": "src/main.js",
@@ -50,7 +50,8 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "artifactName": "Aion-UI-Builder-Setup-${version}.${ext}"
     },
     "publish": {
       "provider": "github",

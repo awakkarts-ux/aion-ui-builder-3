@@ -46,6 +46,14 @@ async function initUpdates() {
       button.disabled = false;
       button.textContent = 'Перезапустить и обновить';
       button.dataset.state = 'ready';
+    } else if (s.state === 'error') {
+      // Без этой ветки ошибка загрузки молча оставляла кнопку в «Загрузка…».
+      if (button.dataset.state !== 'available' && button.dataset.state !== 'downloading') return;
+      button.hidden = false;
+      button.disabled = false;
+      button.textContent = 'Повторить обновление';
+      button.dataset.state = 'available';
+      toast(`Обновление не скачалось: ${s.message || 'нет связи'}`, true);
     }
   };
   window.api.update.onStatus(setStatus);
@@ -56,10 +64,17 @@ async function initUpdates() {
     setTimeout(() => { check.disabled = false; check.textContent = 'Проверить обновления'; }, 1200);
   });
   button.onclick = () => guard(async () => {
-    if (button.dataset.state === 'ready') return window.api.update.install();
-    await window.api.update.download();
+    if (button.dataset.state === 'ready') {
+      button.disabled = true;
+      button.textContent = 'Устанавливаю…';
+      return window.api.update.install();
+    }
+    // Состояние ставим ДО загрузки: download() завершается уже после события
+    // «ready», и запись «Загрузка…» после await навсегда блокировала кнопку.
     button.disabled = true;
     button.textContent = 'Загрузка…';
+    button.dataset.state = 'downloading';
+    await window.api.update.download();
   });
 }
 
