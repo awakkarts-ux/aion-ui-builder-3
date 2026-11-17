@@ -396,3 +396,8 @@ html, body { background: var(--aura), var(--bg-base); }
   .view.is-active > *, .home__grid > .hb { animation: none; }
 }
 
+
+/* «Применить» у темы: пока идёт сравнение с Classic */
+.hb.is-busy .pill[disabled] { opacity: .75; cursor: progress; animation: hb-busy 1.2s ease-in-out infinite; }
+@keyframes hb-busy { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .hb.is-busy .pill[disabled] { animation: none; } }

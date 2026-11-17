@@ -45,7 +45,16 @@ const HOME_SUB = { classic: 'Основа вида', v5: 'Основа вида'
 async function homeTheme(id) {
   if (id) state.profile.theme = id;
   else delete state.profile.theme;
+  saveProfile(); // тема включена сразу, даже если сравнение с Classic прервут
   let base = '';
+  // сравнение с официальным Classic на настоящем клиенте идёт несколько
+  // секунд — без отметки кажется, что кнопка не сработала
+  const btn = id && document.querySelector(`#home-grid [data-look="${id}"] [data-theme-on]`);
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Применяю… сравниваю с Classic';
+    btn.closest('.hb').classList.add('is-busy');
+  }
   if (id && typeof loadLook === 'function') {
     try {
       await loadLook(true);

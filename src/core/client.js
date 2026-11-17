@@ -578,19 +578,36 @@ class Client {
   /** Все резервные копии: имя файла — это путь, где `__` вместо разделителя. */
   backups() {
     if (!fs.existsSync(this.backupDir)) return [];
-    return fs.readdirSync(this.backupDir).map((f) => ({
-      file: path.join(this.backupDir, f),
-      rel: f.split('__').join('/'),
-    }));
+    // в резерве лежат только паки; чужие папки и файлы (например `_replaced`,
+    // которую туда кладут сторонние программы) пропускаем — иначе копирование
+    // папки как файла падает с EPERM и «Вернуть как было» не работает
+    return fs.readdirSync(this.backupDir, { withFileTypes: true })
+      .filter((d) => d.isFile() && /\.pak$/i.test(d.name) && !d.name.startsWith('_'))
+      .map((d) => ({
+        file: path.join(this.backupDir, d.name),
+        rel: d.name.split('__').join('/'),
+      }));
   }
 
   /** Возвращает всё как было: паки из резерва, наши файлы — удалить. */
   restoreAll() {
     const done = [];
+    const failed = [];
     for (const { file, rel } of this.backups()) {
-      fs.copyFileSync(file, this.abs(rel));
+      try {
+        fs.copyFileSync(file, this.abs(rel));
+      } catch (e) {
+        failed.push(`${rel}: ${e.code || e.message}`);
+        continue;
+      }
       this.forgetWritten(rel);
       done.push(rel);
+    }
+    if (failed.length) {
+      this.cache.clear();
+      const busy = failed.some((f) => /EBUSY|EPERM|EACCES/.test(f));
+      throw new Error(`Не удалось вернуть ${failed.length} из ${failed.length + done.length} файлов` +
+        (busy ? ' — закройте игру и лаунчер и повторите' : '') + ': ' + failed.join('; '));
     }
     for (const lang of this.languages()) {
       const f = this.fontPakPath(lang);
