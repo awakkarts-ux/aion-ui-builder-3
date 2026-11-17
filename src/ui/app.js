@@ -685,7 +685,7 @@ function clState() {
 
 async function loadClassicHud() {
   const cl = clState();
-  $('#cl-hud-on').checked = !!cl.hud.enabled;
+  $('#cl-hud-on').checked = lookMix(state.profile).hud;
   if (!cl.root) return;
   const h = await guard(() => window.api.classic.hud(cl.root, cl.hud));
   const box = $('#cl-hud');
@@ -747,7 +747,7 @@ async function loadClassicHud() {
 let clMapsFor = '';
 async function loadClassicMaps() {
   const cl = clState();
-  $('#cl-maps-on').checked = !!cl.maps;
+  $('#cl-maps-on').checked = lookMix(state.profile).maps;
   if (!cl.root || clMapsFor === cl.root) return;
   const box = $('#cl-maps');
   box.innerHTML = '<span class="muted">сравниваю карты двух клиентов — секунд десять…</span>';
@@ -764,12 +764,16 @@ async function loadClassicMaps() {
 
 $('#cl-maps-on').onchange = (e) => {
   clState().maps = e.target.checked;
+  const g = state.profile.look && state.profile.look.groups;
+  if (g) g.maptiles = e.target.checked ? 'classic' : 'own';
   renderSummary();
   saveProfile();
 };
 
 $('#cl-hud-on').onchange = (e) => {
   clState().hud.enabled = e.target.checked;
+  const g = state.profile.look && state.profile.look.groups;
+  if (g) g.hudwin = e.target.checked ? 'classic' : 'own';
   renderBadges();
   renderSummary();
   saveProfile();
@@ -848,7 +852,7 @@ window.api.classic.onImportProgress((msg) => clSetState('импорт: ' + msg))
 async function loadClassic(force) {
   if (!state.ready) return;
   const cl = clState();
-  $('#cl-on').checked = !!cl.enabled;
+  $('#cl-on').checked = lookMix(state.profile).classic;
   clNote();
   if (!cl.root) {
     const guess = await guard(() => window.api.classic.guess());
@@ -982,6 +986,17 @@ function paintClassicSamples() {
 
 $('#cl-on').onchange = (e) => {
   clState().enabled = e.target.checked;
+  // есть микшер — сборка смотрит на него, а не на галочку: переводим все
+  // группы деталей (не переключатели окон) на Classic или обратно на свой
+  const g = state.profile.look && state.profile.look.groups;
+  if (g) {
+    for (const id of Object.keys(g)) {
+      if (LK_SWITCHES.includes(id)) continue;
+      if (e.target.checked) g[id] = 'classic';
+      else if (g[id] === 'classic') g[id] = 'own';
+    }
+    if (typeof lk !== 'undefined' && lk) lk.planFor = '';
+  }
   clNote();
   renderBadges();
   renderSummary();

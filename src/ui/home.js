@@ -113,9 +113,12 @@ async function homeClassicBase() {
     cl.off = {};
     cl.hud.off = {};
     cl.rules = {}; // умолчания: v3 и same включены, v3odd выключен
+    cl.enabled = true;
     cl.hud.enabled = true;
     state.profile.look = { groups };
-    if (!cl.hud.set) cl.hud.set = 's2';
+    // пользователь играет в «Стиле Aion» (hudport.SET_DEFAULT = s1); в 0.1.10–0.1.15 тут
+    // по ошибке ставился «Обычный» (s2) — окна HUD Classic в s1 не попадали
+    if (cl.hud.set !== 's1' && cl.hud.set !== 's2') cl.hud.set = 's1';
     if (typeof lk !== 'undefined' && lk) lk.planFor = ''; // «Вид интерфейса» перечитает
     return true;
   } catch (e) { return false; }

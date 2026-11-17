@@ -1,7 +1,24 @@
 /* ======================= сборка ======================= */
 
-function classicSummary(cl) {
-  if (!cl || !cl.enabled) return 'не меняем';
+/**
+ * Что реально соберётся — по тому же правилу, что и сборка (core/look.js
+ * resolve): есть микшер «Вида интерфейса» — по его группам, нет — по старым
+ * галочкам. Раньше сводка смотрела только на галочки и после «Применить»
+ * на Главной писала «не меняем», хотя сборка Classic ставила (17.11).
+ */
+const LK_SWITCHES = ['hudwin', 'winfix', 'maptiles'];
+function lookMix(p) {
+  const cl = p.classic || {};
+  const g = p.look && p.look.groups;
+  if (!g) {
+    return { v5: !!(p.v5 && p.v5.enabled), classic: !!cl.enabled, hud: !!(cl.hud && cl.hud.enabled), maps: !!cl.maps };
+  }
+  const any = (want) => Object.entries(g).some(([id, v]) => !LK_SWITCHES.includes(id) && v === want);
+  return { v5: any('v5'), classic: any('classic'), hud: g.hudwin === 'classic', maps: g.maptiles === 'classic' };
+}
+
+function classicSummary(cl, on) {
+  if (!cl || !on) return 'не меняем';
   if (!cl.root) return 'включён, но не выбран официальный клиент';
   const off = Object.keys(cl.off || {}).length;
   if (clPlan) return `включён, деталей ${clPicked()} из ${clPlan.total}`;
@@ -10,6 +27,7 @@ function classicSummary(cl) {
 
 function renderSummary() {
   const p = state.profile;
+  const mix = lookMix(p);
   const layout = Object.keys(p.layout).length;
   const count = (id) => Object.keys((p.packs && p.packs[id]) || {}).length;
   const pt = p.portrait;
@@ -38,11 +56,11 @@ function renderSummary() {
     ['Тестовый вариант', p.theme === 'nightcity'
       ? `Night City (${{ mix: 'смешанный', red: 'красный', cyan: 'бирюза' }[p.themeVariant || 'mix'] || 'смешанный'}) — перерисованные атласы и шрифт`
       : 'нет'],
-    ['Вид Aion 5.x', p.v5 && p.v5.enabled ? 'включён' : 'не меняем'],
-    ['Вид официального Classic', classicSummary(p.classic)],
-    ['Окна HUD официального Classic', p.classic && p.classic.hud && p.classic.hud.enabled && p.classic.root
-      ? 'переносим (набор s2)' : 'не меняем'],
-    ['Перекрашенные карты', p.classic && p.classic.maps && p.classic.root ? 'заменяем' : 'не меняем'],
+    ['Вид Aion 5.x', mix.v5 ? 'включён' : 'не меняем'],
+    ['Вид официального Classic', classicSummary(p.classic, mix.classic)],
+    ['Окна HUD официального Classic', mix.hud && p.classic && p.classic.root
+      ? `переносим (набор ${{ s1: '«Стиль Aion»', s2: '«Обычный»' }[(p.classic.hud && p.classic.hud.set)] || '«Стиль Aion»'})` : 'не меняем'],
+    ['Перекрашенные карты', mix.maps && p.classic && p.classic.root ? 'заменяем' : 'не меняем'],
     ['Скинов изменено вручную', Object.keys(p.skins || {}).length],
   ]
     .map(([k, v]) => `<b>${k}</b><span>${v}</span>`)
