@@ -81,6 +81,9 @@ async function initUpdates() {
 initUpdates();
 
 function toast(msg, bad) {
+  // красные сообщения — в журнал (guard пишет сам, со стеком)
+  if (bad && !toast.logged) logError('сообщение', msg);
+  toast.logged = false;
   const el = $('#toast');
   el.textContent = msg;
   el.className = 'toast on' + (bad ? ' bad' : '');
@@ -88,10 +91,23 @@ function toast(msg, bad) {
   toast.t = setTimeout(() => (el.className = 'toast'), 3200);
 }
 
+/** Ошибку окна — в журнал программы (core/errlog.js, logs/errors.log). */
+function logError(where, e) {
+  try {
+    if (window.api && window.api.log) {
+      window.api.log.error({ where, message: String(e && e.message ? e.message : e), stack: e && e.stack ? String(e.stack) : '' }).catch(() => {});
+    }
+  } catch (x) { /* журнал не должен ронять окно */ }
+}
+window.addEventListener('error', (ev) => logError('окно: ' + (ev.filename || '').split('/').pop() + ':' + ev.lineno, ev.error || ev.message));
+window.addEventListener('unhandledrejection', (ev) => logError('окно: promise', ev.reason));
+
 async function guard(fn) {
   try {
     return await fn();
   } catch (e) {
+    logError('guard', e);
+    toast.logged = true;
     toast(String(e && e.message ? e.message : e), true);
     return null;
   }

@@ -14,6 +14,7 @@
  *   own/skins.csv                      все скины: библиотека, категория, имя, тип, атлас, прямоугольники
  *   own/atlases/<атлас>.png            атласы v4_*
  *   classic/windows/…, classic/skins.csv, classic/atlases/…  — то же у официального
+ *   report/errors.log, last-build.log, profile.json, backup.txt, client.txt — журналы и состояние
  */
 
 const pak = require('./pak');
@@ -138,11 +139,16 @@ function run(client, o) {
     say(`выгрузка: Classic — окон ${cl.windows}, скинов ${cl.skins}, атласов ${cl.atlases}`);
   }
 
+  // журналы и состояние программы (main.js: errors.log, last-build.log, профиль, резерв)
+  if (o.extra) for (const [n, buf] of o.extra) out.set(n, buf);
+  res.report = o.extra ? o.extra.size : 0;
+
   out.set('README.txt', Buffer.from([
     'Выгрузка Aion UI Builder для дизайна интерфейса.',
     `Язык: ${lang}. Окон: ${res.windows}, скинов: ${res.skins}, атласов: ${res.atlases}.`,
     res.classic ? `Официальный Classic: окон ${res.classic.windows}, скинов ${res.classic.skins}, атласов ${res.classic.atlases}.` : 'Официальный Classic не импортирован.',
     res.problems.length ? 'Проблемы: ' + res.problems.join('; ') : 'Проблем нет.',
+    res.report ? `Журналы и состояние программы: report/ (файлов ${res.report}).` : '',
     '',
     'Пришлите этот файл в чат с Claude целиком.',
   ].join('\r\n'), 'utf8'));

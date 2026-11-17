@@ -34,6 +34,9 @@ contextBridge.exposeInMainWorld('api', {
     export: (p) => call('profile:export', p),
     import: () => call('profile:import'),
   },
+  log: {
+    error: (info) => call('log:error', info),
+  },
   build: {
     apply: (p) => call('build:apply', p),
     onProgress: (fn) => ipcRenderer.on('build:progress', (_e, msg) => fn(msg)),

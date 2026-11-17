@@ -30,6 +30,7 @@ const itemicons = require('./core/itemicons');
 const theme = require('./core/theme');
 const fonts = require('./core/fonts');
 const designdump = require('./core/designdump');
+const errlog = require('./core/errlog');
 const { relativePath, assertImage, assertRgbaBytes, safeFileName } = require('./core/safe');
 const { Client, PAKS, PACKS } = require('./core/client');
 
@@ -41,6 +42,26 @@ const DEFAULT_ROOTS = [
 
 let win = null;
 let client = null;
+
+// журнал ошибок: любой упавший вызов окна пишется в userData/logs/errors.log
+errlog.init(path.join(app.getPath('userData'), 'logs'), app.getVersion());
+{
+  const handle = ipcMain.handle.bind(ipcMain);
+  ipcMain.handle = (channel, fn) => handle(channel, async (...args) => {
+    try {
+      return await fn(...args);
+    } catch (e) {
+      errlog.write('main', channel, e);
+      throw e;
+    }
+  });
+}
+process.on('uncaughtException', (e) => errlog.write('main', 'uncaught', e));
+process.on('unhandledRejection', (e) => errlog.write('main', 'unhandled', e));
+ipcMain.handle('log:error', (_e, info) => {
+  const i = info || {};
+  errlog.write('окно', String(i.where || '').slice(0, 200), { message: String(i.message || '').slice(0, 2000), stack: String(i.stack || '').slice(0, 4000) });
+});
 
 function setupAutoUpdates() {
   if (!app.isPackaged) return;
@@ -445,6 +466,7 @@ ipcMain.handle('build:apply', async (_e, profile) => {
   try {
     report = await building;
   } catch (error) {
+    errlog.saveBuild(log, error);
     try {
       writeJson(pendingProfilePath(), {
         status: 'build-failed',
@@ -477,6 +499,7 @@ ipcMain.handle('build:apply', async (_e, profile) => {
     }
     log.push('ВНИМАНИЕ: профиль НЕ сохранён (' + profilePath() + '): ' + e.message);
   }
+  errlog.saveBuild(log, null);
   return { report, log };
 });
 
@@ -781,7 +804,27 @@ ipcMain.handle('design:dump', async () => {
   if (root && fs.existsSync(root)) {
     try { const d = new donorlib.Donor(root); if (d.check().ok) donor = d; } catch (e) { donor = null; }
   }
-  const res = designdump.run(client, { lang: prof.lang || 'rus', donor, outFile: r.filePath });
+  // журналы и состояние программы — в report/ того же архива
+  const extra = new Map();
+  for (const [n, buf] of errlog.files()) extra.set('report/' + n, buf);
+  try { extra.set('report/profile.json', fs.readFileSync(profilePath())); } catch (e) { /* нет профиля */ }
+  try {
+    const bdir = backupDir();
+    const rows = fs.existsSync(bdir) ? fs.readdirSync(bdir, { withFileTypes: true }).map((d) => {
+      const st = fs.statSync(path.join(bdir, d.name));
+      return `${d.isDirectory() ? '[папка] ' : ''}${d.name}\t${st.size}\t${st.mtime.toISOString()}`;
+    }) : ['резерва нет'];
+    const stamps = path.join(path.dirname(bdir), path.basename(bdir) + '-stamps.json');
+    extra.set('report/backup.txt', Buffer.from(rows.join('\n') + '\n', 'utf8'));
+    if (fs.existsSync(stamps)) extra.set('report/backup-stamps.json', fs.readFileSync(stamps));
+    const live = client.backups().map(({ rel }) => {
+      const f = client.abs(rel);
+      const st = fs.existsSync(f) ? fs.statSync(f) : null;
+      return `${rel}\t${st ? st.size + '\t' + st.mtime.toISOString() : 'нет файла'}`;
+    });
+    extra.set('report/client.txt', Buffer.from(`клиент: ${client.root}\nверсия программы: ${app.getVersion()}\n` + live.join('\n') + '\n', 'utf8'));
+  } catch (e) { errlog.write('main', 'design:dump report', e); }
+  const res = designdump.run(client, { lang: prof.lang || 'rus', donor, outFile: r.filePath, extra });
   shell.showItemInFolder(r.filePath);
   return res;
 });

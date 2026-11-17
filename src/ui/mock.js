@@ -374,6 +374,7 @@ if (!window.api) {
       pickFile: async () => null,
     },
     shots: { list: async () => [], read: async () => null },
+    log: { error: async () => null },
     look: {
       groups: async (root) => ({ classicOk: !!root, groups: ['frames', 'buttons', 'hud', 'gauges', 'hudwin', 'winfix', 'maptiles'].map((id) => ({ id, kind: /^(hudwin|winfix|maptiles)$/.test(id) ? 'switch' : '' })) }),
       plan: async (root) => {

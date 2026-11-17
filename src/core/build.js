@@ -24,6 +24,7 @@ const running = require('./running');
 const { PACKS, BUILDER_PAK } = require('./client');
 const look = require('./look');
 const theme = require('./theme');
+const ncwin = require('./ncwin');
 const fonts = require('./fonts');
 const radar = require('./radar');
 const calib = require('./calib');
@@ -232,6 +233,13 @@ function apply(client, profile, log, opts) {
 
   // «сделать отдельным» (редактор): в окне ссылки переводятся на копию элемента,
   // сама копия появляется в библиотеке скинов ниже (elements.applySplits)
+  // тема Night City: своя раскладка окна цели (ncwin.js) поверх своего или официального окна
+  const wantNc = profile.theme === 'nightcity';
+  if (wantNc) {
+    const id = 'game/target_dialog.xml';
+    layout[id] = Object.assign({}, layout[id], { nc: 'target' });
+  }
+
   const splits = Array.isArray(profile.splits) ? profile.splits.filter((s) => s && s.win && s.el) : [];
   for (const s of splits) {
     const cur = layout[s.win] || {};
@@ -265,6 +273,7 @@ function apply(client, profile, log, opts) {
     if (Number.isInteger(edit.calib) && edit.calib >= 0) { calib.apply(root, edit.calib); touched = true; }
     if (edit.arrange) { arrange.apply(root, edit.arrange); touched = true; }
     if (edit.split && elementsLib.splitDialog(root, edit.split)) touched = true;
+    if (edit.nc === 'target' && ncwin.applyTarget(root)) touched = true;
     // раскладка «Стиля Aion» и сетка бафов правят окно после — повторяем,
     // и полоса захвата — по окончательному размеру
     if (edit.free) {
@@ -381,12 +390,12 @@ function apply(client, profile, log, opts) {
   const wantGrip = free.length > 0;
 
   if ((Object.keys(skinEdits).length || wantV5 || classic || hudLib || wantRadar || wantCalib || wantEl ||
-      splits.length || wantGrip) && client.has('preload')) {
+      splits.length || wantGrip || wantNc) && client.has('preload')) {
     const files = client.original('preload');
     const done = new Map(); // библиотека -> новое содержимое
 
     const libs = new Set(Object.keys(skinEdits).map((k) => k.split('|')[0]));
-    if (wantV5 || hudLib || wantRadar || wantCalib || wantGrip) libs.add(v5.V4_LIB);
+    if (wantV5 || hudLib || wantRadar || wantCalib || wantGrip || wantNc) libs.add(v5.V4_LIB);
     if (wantRadar) {
       // маска карты живёт в free_version.xml; имя файла в паке — как есть
       const fv = [...files.keys()].find((k) => /^free_version\.xml$/i.test(k));
@@ -446,6 +455,13 @@ function apply(client, profile, log, opts) {
         const add = calib.skins();
         root.kids.push(...add);
         n += add.length;
+      }
+      if (wantNc && lib === v5.V4_LIB) {
+        const add = ncwin.library();
+        root.kids.push(...add);
+        n += add.length;
+        say(`тема Night City: окно цели в своей раскладке, скинов и пресетов ${add.length}` +
+          (ncwin.GAUGE_TEST ? ' — полоса HP цели: тестовая линейка 0–9' : ''));
       }
       if (wantGrip && lib === v5.V4_LIB) {
         const add = hud.gripLibrary();
@@ -529,10 +545,11 @@ function apply(client, profile, log, opts) {
 
   // --- свои картинки программы (мини-карта): свой пак рядом с ui.pak --------
   const builderPak = client.abs(BUILDER_PAK);
-  if (wantRadar || wantCalib || wantGrip || elFiles.size) {
+  if (wantRadar || wantCalib || wantGrip || wantNc || elFiles.size) {
     const own = wantRadar ? radar.files() : new Map();
     if (wantCalib) own.set(calib.ATLAS.split('/').pop() + '.dds', calib.atlas());
     if (wantGrip) own.set(hud.GRIP_ATLAS.split('/').pop() + '.dds', hud.gripAtlas());
+    if (wantNc) own.set(ncwin.ATLAS.split('/').pop() + '.dds', ncwin.atlas());
     for (const [n, raw] of elFiles) own.set(n, raw);
     if (dry) {
       for (const [n, raw] of own) out.atlases.set(n, raw);
@@ -540,7 +557,7 @@ function apply(client, profile, log, opts) {
       pak.writePak(builderPak, own, { encrypt: true, dllPath: client.dll });
     }
     report.files += own.size;
-    say(`свои картинки программы (${[wantRadar && 'мини-карта', wantCalib && 'разметка', wantGrip && 'тело окон',
+    say(`свои картинки программы (${[wantRadar && 'мини-карта', wantCalib && 'разметка', wantGrip && 'тело окон', wantNc && 'окна Night City',
       elFiles.size && 'картинки элементов'].filter(Boolean).join(', ')}) -> ${BUILDER_PAK}`);
   } else if (!dry && fs.existsSync(builderPak)) {
     fs.unlinkSync(builderPak);
