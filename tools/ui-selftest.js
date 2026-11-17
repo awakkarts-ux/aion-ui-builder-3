@@ -9,7 +9,7 @@ const html = fs.readFileSync(htmlPath, 'utf8');
 
 const requiredIds = [
   'pset', 'pset-btn', 'pset-menu', 'do-restore', 'do-apply',
-  'w-min', 'w-max', 'w-close', 'cl-btn', 'home-grid', 'gd-grid',
+  'w-min', 'w-max', 'w-close', 'app-check-update', 'home-grid', 'gd-grid',
 ];
 
 for (const id of requiredIds) {

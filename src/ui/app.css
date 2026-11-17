@@ -293,6 +293,9 @@ h2 { font-size: 15px; font-weight: 600; letter-spacing: -.01em; color: var(--tex
   min-width: 0;
 }
 .card--tight { padding: 10px 12px; }
+/* карточки подряд в разделе — с отступом (бафы, шрифт); с заголовком h2 отступ схлопывается */
+.view > .card { margin-bottom: 16px; }
+.view > .card:last-child { margin-bottom: 0; }
 
 .row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .row > label:first-child {
@@ -798,7 +801,7 @@ input[type='range']:disabled { opacity: .4; cursor: default; }
 
 /* ---------- цифры урона ---------- */
 
-.hn { display: grid; grid-template-columns: minmax(0, 1fr) 372px; gap: 18px; align-items: start; }
+.hn { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 18px; align-items: start; }
 .hn .card { max-width: none; }
 .hn .row { flex-wrap: wrap; }
 .hn__range { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); white-space: nowrap; }
@@ -859,12 +862,17 @@ input[type='color']::-webkit-color-swatch { border: 0; border-radius: 5px; }
 }
 .scrub .scrub__hex:focus { border-color: rgba(255, 255, 255, .22); }
 .mp__panel .scrub { max-width: none; }
-.hn__plates { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 6px 10px; align-items: center; }
+.hn__plates { display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; gap: 6px 10px; align-items: center; }
+.hn__pic { display: inline-flex; align-items: center; gap: 6px; }
+.hn__pic canvas { width: 24px; height: 24px; flex: none; border-radius: 6px; background: var(--bg-deep); }
+.hn__pic .btn { padding: 6px 12px; font-size: 12px; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hn__pic .hn__x { padding: 6px 10px; }
 .hn__plates span { font-size: 13px; color: var(--text-muted); }
 .hn__foot { margin-top: 18px; }
 .hn__preview { position: sticky; top: 0; }
 .hn__ptitle { color: var(--text-strong); font-weight: 600; margin-right: auto; }
-.hn__preview canvas { width: 340px; border-radius: var(--radius-sm); image-rendering: pixelated; }
+.hn__scroll { max-height: calc(100vh - 260px); overflow: auto; border-radius: var(--radius-sm); }
+.hn__preview canvas { display: block; border-radius: var(--radius-sm); }
 /* узкое окно: предпросмотр — над настройками, а не сбоку */
 @media (max-width: 1260px) {
   .hn { grid-template-columns: minmax(0, 1fr); }
@@ -1145,8 +1153,15 @@ details > summary { cursor: pointer; font-size: 12px; }
 .fnt__head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px; }
 .fnt__head b { color: var(--text-strong); font-weight: 600; }
 .fnt__head .muted { font-size: 12.5px; }
-.fnt { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-@media (max-width: 1100px) { .fnt { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.fnt { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+/* как у «Цифр урона»: настройки слева, предпросмотр справа и не уезжает при прокрутке */
+.fnt-layout { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 18px; align-items: start; }
+.fnt__main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.fnt__side { position: sticky; top: 0; }
+@media (max-width: 1180px) {
+  .fnt-layout { grid-template-columns: minmax(0, 1fr); }
+  .fnt__side { position: static; order: -1; }
+}
 .fnt__it {
   display: flex; flex-direction: column; gap: 6px; text-align: left; padding: 14px 14px 12px; border-radius: 14px;
   background: rgba(255, 255, 255, .04); border: 1px solid rgba(255, 255, 255, .08); color: var(--text-strong);
@@ -1187,3 +1202,26 @@ details > summary { cursor: pointer; font-size: 12px; }
 .rail:hover .nav > span:not(.nav__ic),.rail:hover .rail__group{opacity:1}
 
 
+
+/* Свёрнутое меню (17.11.2026): ровные отступы со всех сторон.
+   Полоса 64: поле 8 + пункт 48 (значок 36 по центру, по 6 вокруг) + поле 8.
+   При раскрытии значки не сдвигаются — меняется только ширина. */
+.rail { padding: 8px; gap: 4px; }
+.rail .nav { padding: 6px; height: 48px; flex: none; }
+.rail .nav > span:not(.nav__ic) { margin-left: 4px; }
+/* «Разделы» сверху — лишний пустой отступ в свёрнутом виде; убрано */
+.rail > .rail__group:first-child { display: none; }
+/* «Тонкая настройка»: в свёрнутом виде — короткая черта-разделитель на той же высоте */
+.rail__group:not(:first-child) { position: relative; margin-top: 8px; padding: 6px 12px; height: 28px; line-height: 16px; flex: none; }
+.rail__group:not(:first-child)::before {
+  content: ''; position: absolute; left: 14px; top: 50%; width: 20px; height: 1px;
+  background: var(--stroke-strong); transition: opacity .14s ease;
+}
+.rail:hover .rail__group:not(:first-child)::before { opacity: 0; }
+/* выбранный пункт: в свёрнутом виде — только значок, без заливки строки и без ореола */
+.rail .nav.is-active { background: transparent; }
+.rail:hover .nav.is-active { background: var(--bg-active); }
+.rail .nav.is-active .nav__ic { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28); }
+/* подпись группы гаснет цветом, а не прозрачностью — иначе гасла бы и черта */
+.rail .rail__group { opacity: 1; color: transparent; transition: color .14s ease; }
+.rail:hover .rail__group { color: var(--text-faint); }

@@ -2,9 +2,6 @@
 
 /* Окно сборщика. Вся работа с клиентом — через preload (window.api). */
 
-const DESIGN_W = 1280;
-const DESIGN_H = 960;
-
 const state = {
   profile: {
     layout: {},
@@ -13,10 +10,6 @@ const state = {
     skins: {},
     lang: 'rus',
   },
-  dialogs: [],
-  byId: new Map(),
-  selected: null,
-  scale: 1,
   languages: [],
   ready: false,
 };
@@ -126,98 +119,9 @@ function debounce(fn, ms) {
   };
 }
 
-/* ======================= опись диалогов ======================= */
-
-async function loadCatalogue() {
-  const list = await guard(() => window.api.catalogue.load());
-  if (!list) return;
-  state.dialogs = list;
-  state.byId = new Map(list.map((d) => [d.id, d]));
-  renderList();
-  renderBoxes();
-  renderBadges();
-  fitCanvas();
-}
-
-function edited(id) {
-  return !!state.profile.layout[id];
-}
-
-function effective(d) {
-  const e = state.profile.layout[d.id] || {};
-  return {
-    frame: Object.assign({}, d.frame, e.frame || {}),
-    movable: typeof e.movable === 'boolean' ? e.movable : d.movable,
-    visible: typeof e.visible === 'boolean' ? e.visible : d.visible,
-    widgets: e.widgets || {},
-  };
-}
-
-function editOf(id) {
-  if (!state.profile.layout[id]) state.profile.layout[id] = {};
-  return state.profile.layout[id];
-}
-
-/** Если правка вернулась к исходному состоянию — убираем её совсем. */
-function normalize(id) {
-  const d = state.byId.get(id);
-  const e = state.profile.layout[id];
-  if (!d || !e) return;
-  if (e.frame) {
-    const f = e.frame;
-    if (f.x === d.frame.x && f.y === d.frame.y && f.w === d.frame.w && f.h === d.frame.h) {
-      delete e.frame;
-    }
-  }
-  if (e.movable === d.movable) delete e.movable;
-  if (e.visible === d.visible) delete e.visible;
-  if (e.widgets && !Object.keys(e.widgets).length) delete e.widgets;
-  if (!Object.keys(e).length) delete state.profile.layout[id];
-}
-
-function visibleDialogs() {
-  const q = $('#dlg-search').value.trim().toLowerCase();
-  const hudOnly = $('#dlg-hud-only').checked;
-  const set = $('#hud-set').value;
-  return state.dialogs.filter((d) => {
-    // s1 и s2 — два набора одних и тех же диалогов; показываем только выбранный,
-    // иначе в списке всё двоится.
-    if ((d.pak === 'hud_s1' || d.pak === 'hud_s2') && d.pak !== set && !edited(d.id)) return false;
-    if (hudOnly && d.group !== 'HUD' && !edited(d.id)) return false;
-    if (!q) return true;
-    return d.title.toLowerCase().includes(q) || d.dialog.toLowerCase().includes(q);
-  });
-}
-
-function renderList() {
-  const list = visibleDialogs();
-  const groups = new Map();
-  for (const d of list) {
-    if (!groups.has(d.group)) groups.set(d.group, []);
-    groups.get(d.group).push(d);
-  }
-  const html = [];
-  for (const [g, items] of groups) {
-    html.push(`<div class="list__group">${g}</div>`);
-    for (const d of items) {
-      const f = effective(d).frame;
-      html.push(
-        `<div class="item ${d.id === state.selected ? 'is-active' : ''} ` +
-          `${edited(d.id) ? 'is-edited' : ''}" data-id="${d.id}">` +
-          `<span>${d.title}</span><small>${f.x},${f.y}</small></div>`
-      );
-    }
-  }
-  const el = $('#dlg-list');
-  el.innerHTML = html.join('');
-  el.querySelectorAll('.item').forEach((n) => {
-    n.onclick = () => select(n.dataset.id);
-  });
-}
+/* ======================= счётчики в меню ======================= */
 
 function renderBadges() {
-  const n = Object.keys(state.profile.layout).length;
-  $('#badge-layout').textContent = n || '';
   $('#badge-font').textContent = state.profile.font.enabled ? '1' : '';
   const pt = state.profile.portrait;
   $('#badge-portrait').textContent = pt && pt.enabled ? '1' : '';
@@ -230,343 +134,16 @@ function renderBadges() {
     const n = id === 'skills'
       ? skFamilyCount(store) + Object.keys((state.profile.packs && state.profile.packs.items) || {}).length
       : Object.keys(store).length;
-    $('#badge-' + id).textContent = n || '';
+    const b = $('#badge-' + id);
+    if (b) b.textContent = n || '';
   }
-  $('#badge-skins').textContent = Object.keys(state.profile.skins || {}).length || '';
-  $('#badge-look').textContent = lookN || '';
+  if ($('#badge-look')) $('#badge-look').textContent = lookN || '';
   $('#badge-editor').textContent = Object.keys(state.profile.elements || {}).length || '';
   $('#badge-maps').textContent = Object.keys(state.profile.maps || {}).length || '';
   $('#badge-v5').textContent = state.profile.v5 && state.profile.v5.enabled ? '1' : '';
   const cl = state.profile.classic;
   const clOn = cl && cl.root ? (cl.enabled ? 1 : 0) + (cl.hud && cl.hud.enabled ? 1 : 0) : 0;
   $('#badge-classic').textContent = clOn || '';
-}
-
-/* ======================= поле раскладки ======================= */
-
-function shownOnCanvas() {
-  if ($('#opt-all').checked) return visibleDialogs();
-  const set = new Set(visibleDialogs().filter((d) => d.group === 'HUD').map((d) => d.id));
-  for (const id of Object.keys(state.profile.layout)) set.add(id);
-  if (state.selected) set.add(state.selected);
-  return [...set].map((id) => state.byId.get(id)).filter(Boolean);
-}
-
-function renderBoxes() {
-  const canvas = $('#canvas');
-  canvas.querySelectorAll('.box').forEach((n) => n.remove());
-  for (const d of shownOnCanvas()) {
-    const eff = effective(d);
-    const box = document.createElement('div');
-    box.className =
-      'box' + (edited(d.id) ? ' is-edited' : '') + (d.id === state.selected ? ' is-active' : '');
-    box.style.left = eff.frame.x + 'px';
-    box.style.top = eff.frame.y + 'px';
-    box.style.width = Math.max(eff.frame.w, 8) + 'px';
-    box.style.height = Math.max(eff.frame.h, 8) + 'px';
-    box.style.opacity = eff.visible ? '1' : '.35';
-    box.dataset.id = d.id;
-    box.innerHTML = `<span class="box__tag">${d.title}</span><span class="box__grip"></span>`;
-    canvas.appendChild(box);
-  }
-}
-
-function fitCanvas() {
-  const wrap = $('.canvas-wrap');
-  if (!wrap.clientWidth) return;
-  const s = Math.min(wrap.clientWidth / DESIGN_W, wrap.clientHeight / DESIGN_H);
-  state.scale = Math.max(0.2, Math.min(1, s));
-  const c = $('#canvas');
-  c.style.transform = `scale(${state.scale})`;
-  // Трансформа не меняет место элемента в потоке, поэтому лишние габариты
-  // снимаем обёрткой фиксированного размера — иначе появляется прокрутка.
-  const holder = c.parentElement;
-  holder.style.width = DESIGN_W * state.scale + 'px';
-  holder.style.height = DESIGN_H * state.scale + 'px';
-}
-
-window.addEventListener('resize', fitCanvas);
-
-$('#dlg-search').oninput = () => { renderList(); renderBoxes(); };
-$('#dlg-hud-only').onchange = () => { renderList(); renderBoxes(); };
-$('#opt-all').onchange = renderBoxes;
-$('#opt-grid').onchange = (e) => $('#canvas-grid').classList.toggle('on', e.target.checked);
-$('#hud-set').onchange = () => { renderList(); renderBoxes(); };
-
-/* --- перетаскивание --- */
-
-let drag = null;
-
-$('#canvas').addEventListener('pointerdown', (e) => {
-  const box = e.target.closest('.box');
-  if (!box) return;
-  const d = state.byId.get(box.dataset.id);
-  if (!d) return;
-  select(d.id);
-  const f = effective(d).frame;
-  const mode = e.target.classList.contains('box__grip') ? 'size' : 'move';
-  // место таких окон игра выбирает сама — перетаскивание дало бы пустую правку
-  if (mode === 'move' && codePlaced(d.id)) {
-    toast('место этого окна игра выбирает сама — двигать бесполезно, меняется только размер');
-    return;
-  }
-  drag = {
-    id: d.id,
-    mode,
-    sx: e.clientX,
-    sy: e.clientY,
-    start: Object.assign({}, f),
-  };
-  // Захват указателя не обязателен: у синтетических событий его нет,
-  // а вверх мы всё равно ловим на окне.
-  try { box.setPointerCapture(e.pointerId); } catch (_) {}
-  e.preventDefault();
-});
-
-window.addEventListener('pointermove', (e) => {
-  if (!drag) return;
-  const step = e.shiftKey ? 10 : 1;
-  const dx = Math.round((e.clientX - drag.sx) / state.scale / step) * step;
-  const dy = Math.round((e.clientY - drag.sy) / state.scale / step) * step;
-  const s = drag.start;
-  const f =
-    drag.mode === 'move'
-      ? { x: s.x + dx, y: s.y + dy, w: s.w, h: s.h }
-      : { x: s.x, y: s.y, w: Math.max(8, s.w + dx), h: Math.max(8, s.h + dy) };
-  setFrame(drag.id, f, true);
-});
-
-function endDrag() {
-  if (!drag) return;
-  normalize(drag.id);
-  drag = null;
-  renderList();
-  renderBadges();
-  saveProfile();
-}
-
-window.addEventListener('pointerup', endDrag);
-window.addEventListener('pointercancel', endDrag);
-
-document.addEventListener('keydown', (e) => {
-  if (!state.selected) return;
-  if (document.activeElement && /INPUT|SELECT/.test(document.activeElement.tagName)) return;
-  const map = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
-  const m = map[e.key];
-  if (!m) return;
-  const k = e.shiftKey ? 10 : 1;
-  const f = Object.assign({}, effective(state.byId.get(state.selected)).frame);
-  f.x += m[0] * k;
-  f.y += m[1] * k;
-  setFrame(state.selected, f);
-  e.preventDefault();
-});
-
-function setFrame(id, f, light) {
-  editOf(id).frame = f;
-  const box = $(`.box[data-id="${CSS.escape(id)}"]`);
-  if (box) {
-    box.style.left = f.x + 'px';
-    box.style.top = f.y + 'px';
-    box.style.width = Math.max(f.w, 8) + 'px';
-    box.style.height = Math.max(f.h, 8) + 'px';
-    box.classList.add('is-edited');
-  }
-  syncPropInputs(f);
-  if (!light) {
-    normalize(id);
-    renderList();
-    renderBadges();
-    saveProfile();
-  }
-}
-
-function syncPropInputs(f) {
-  const set = (sel, v) => {
-    const el = $(sel);
-    if (el && document.activeElement !== el) el.value = v;
-  };
-  set('#p-x', f.x); set('#p-y', f.y); set('#p-w', f.w); set('#p-h', f.h);
-}
-
-/* ======================= свойства ======================= */
-
-function select(id) {
-  state.selected = id;
-  renderList();
-  renderBoxes();
-  renderProps();
-}
-
-/**
- * Окна, место которых игра выбирает сама: x/y из файла не читает (проверено в
- * игре 27.09 — окна наборов HUD, бафы, дебафы, цель, ряды умений). Размер и
- * элементы внутри — читает.
- */
-const CODE_PLACED = new Set(['buff_status_dialog', 'debuff_status_dialog', 'target_dialog',
-  'target_assist_dialog', 'quickbar_dialog_ctrl', 'quickbar_dialog_alt', 'quickbar_dialog_extra']);
-const codePlaced = (id) => /^hud_s\d\//.test(id) ||
-  CODE_PLACED.has(String(id).replace(/^game\//, '').replace(/\.xml$/, ''));
-
-function renderProps() {
-  const el = $('#props');
-  const d = state.byId.get(state.selected);
-  if (!d) {
-    el.innerHTML = '<div class="muted pad">Выбери диалог слева или прямоугольник на поле.</div>';
-    return;
-  }
-  const eff = effective(d);
-  const widgets = d.widgets
-    .map((w) => {
-      const e = eff.widgets[w.name] || {};
-      const on = typeof e.visible === 'boolean' ? e.visible : w.visible;
-      const f = Object.assign({}, w.frame, e.frame || {});
-      const changed = !!e.frame;
-      const geom = w.frame
-        ? `<div class="wgeom${changed ? ' is-edited' : ''}">` +
-          ['x', 'y', 'w', 'h'].map((k) =>
-            `<input type="number" data-wframe="${w.name}" data-k="${k}" value="${f[k]}" />`
-          ).join('') +
-          '</div>'
-        : '';
-      return (
-        `<div class="wrow"><label class="check"><input type="checkbox" data-widget="${w.name}" ` +
-        `${on ? 'checked' : ''} /> ${w.name} <span class="muted">${w.type}</span></label>${geom}</div>`
-      );
-    })
-    .join('');
-
-  el.innerHTML = `
-    <div class="props__head">
-      <b>${d.title}</b>
-      <span>${d.dialog} · ${d.pak}</span>
-    </div>
-    <div class="props__body">
-      <div class="props__grid">
-        <label class="field"><span>X</span><input type="number" id="p-x" value="${eff.frame.x}" ${codePlaced(d.id) ? 'disabled' : ''} /></label>
-        <label class="field"><span>Y</span><input type="number" id="p-y" value="${eff.frame.y}" ${codePlaced(d.id) ? 'disabled' : ''} /></label>
-        <label class="field"><span>Ширина</span><input type="number" id="p-w" value="${eff.frame.w}" /></label>
-        <label class="field"><span>Высота</span><input type="number" id="p-h" value="${eff.frame.h}" /></label>
-      </div>
-      <label class="check"><input type="checkbox" id="p-move" ${eff.movable ? 'checked' : ''} />
-        можно таскать мышью в игре</label>
-      <label class="check"><input type="checkbox" id="p-vis" ${eff.visible ? 'checked' : ''} />
-        показывать</label>
-      <div class="muted" style="font-size:12px">
-        Привязка: ${d.hAlign || '—'} / ${d.vAlign || '—'}
-      </div>
-      <div class="hintbox">${codePlaced(d.id)
-        ? '<b>Место этого окна игра выбирает сама</b> — X и Y из файла не читает, двигать его здесь бесполезно ' +
-          '(проверено в игре). Размер и элементы внутри — читает. Карту и полосы HP/MP двигает ' +
-          '«Вид интерфейса» → «Место карты».'
-        : 'X и Y самого окна клиент может перекрыть своей сохранённой раскладкой — после установки нажми в игре ' +
-          '<b>Настройки → «Расположить окна по умолчанию»</b>. Размеры и элементы внутри окна применяются сразу.'}
-      </div>
-      ${widgets ? '<h2 style="margin:8px 0 2px">Элементы внутри</h2>' +
-        '<div class="muted" style="font-size:11px;margin:-4px 0 4px">' +
-        'галка — показывать, четыре поля — X, Y, ширина, высота</div>' +
-        '<div class="widgets">' + widgets + '</div>' : ''}
-      <div class="row" style="margin-top:8px">
-        <button class="btn" id="p-xml">Показать XML</button>
-        <button class="btn btn--danger" id="p-reset" ${edited(d.id) ? '' : 'disabled'}>Сбросить</button>
-      </div>
-    </div>`;
-
-  ['x', 'y', 'w', 'h'].forEach((k) => {
-    $('#p-' + k).oninput = () => {
-      const f = {
-        x: +$('#p-x').value || 0,
-        y: +$('#p-y').value || 0,
-        w: +$('#p-w').value || 0,
-        h: +$('#p-h').value || 0,
-      };
-      setFrame(d.id, f);
-    };
-  });
-
-  $('#p-move').onchange = (e) => {
-    editOf(d.id).movable = e.target.checked;
-    normalize(d.id);
-    renderList(); renderBadges(); saveProfile();
-  };
-  $('#p-vis').onchange = (e) => {
-    editOf(d.id).visible = e.target.checked;
-    normalize(d.id);
-    renderList(); renderBoxes(); renderBadges(); saveProfile();
-  };
-  const widgetEdit = (name) => {
-    const e = editOf(d.id);
-    if (!e.widgets) e.widgets = {};
-    if (!e.widgets[name]) e.widgets[name] = {};
-    return e.widgets[name];
-  };
-  /** Правка виджета, совпавшая с оригиналом, из профиля убирается. */
-  const tidyWidget = (name) => {
-    const e = state.profile.layout[d.id];
-    const w = d.widgets.find((x) => x.name === name);
-    const cur = e && e.widgets && e.widgets[name];
-    if (!cur || !w) return;
-    if (cur.visible === w.visible) delete cur.visible;
-    if (cur.frame && w.frame && ['x', 'y', 'w', 'h'].every((k) => cur.frame[k] === w.frame[k])) {
-      delete cur.frame;
-    }
-    if (!Object.keys(cur).length) delete e.widgets[name];
-    normalize(d.id);
-  };
-
-  el.querySelectorAll('[data-widget]').forEach((n) => {
-    n.onchange = () => {
-      widgetEdit(n.dataset.widget).visible = n.checked;
-      tidyWidget(n.dataset.widget);
-      renderList(); renderBadges(); saveProfile();
-    };
-  });
-
-  el.querySelectorAll('[data-wframe]').forEach((n) => {
-    n.oninput = () => {
-      const name = n.dataset.wframe;
-      const w = d.widgets.find((x) => x.name === name);
-      const cur = widgetEdit(name);
-      const f = Object.assign({}, w.frame, cur.frame || {});
-      f[n.dataset.k] = Number(n.value) || 0;
-      cur.frame = f;
-      n.closest('.wgeom').classList.add('is-edited');
-      tidyWidget(name);
-      renderList(); renderBadges(); saveProfile();
-    };
-  });
-  $('#p-xml').onclick = () =>
-    guard(async () => {
-      const xml = await window.api.catalogue.xml(d.id);
-      showXml(d.title, xml);
-    });
-  $('#p-reset').onclick = () => {
-    delete state.profile.layout[d.id];
-    renderList(); renderBoxes(); renderProps(); renderBadges(); saveProfile();
-  };
-}
-
-function showXml(title, xml) {
-  const view = $('.view[data-view="apply"]');
-  $$('.nav').forEach((x) => x.classList.toggle('is-active', x.dataset.view === 'apply'));
-  $$('.view').forEach((v) => v.classList.toggle('is-active', v === view));
-  $('#apply-log').textContent = '// ' + title + '\n' + xml;
-}
-
-/* ======================= подложка ======================= */
-
-async function loadShots() {
-  const names = await window.api.shots.list();
-  const sel = $('#shot-pick');
-  sel.innerHTML =
-    '<option value="">без подложки</option>' +
-    names.map((n) => `<option value="${n}">${n}</option>`).join('');
-  sel.onchange = async () => {
-    const img = $('#canvas-shot');
-    if (!sel.value) { img.removeAttribute('src'); return; }
-    img.src = (await window.api.shots.read(sel.value)) || '';
-  };
-  if (names.length) { sel.value = names[0]; sel.onchange(); }
 }
 
 /* ======================= вид Aion 5.x ======================= */
@@ -1836,9 +1413,6 @@ function afterProfileLoad() {
   renderFont();
   renderFontLangs();
   if (state.portraitStock) renderPortrait();
-  renderList();
-  renderBoxes();
-  renderProps();
   renderBadges();
   renderSummary();
   icons.loadedFor = null;
@@ -1874,7 +1448,6 @@ window.addEventListener('DOMContentLoaded', async function boot() {
   afterProfileLoad();
   await initPortrait();
   setClient(await window.api.client.init());
-  fitCanvas();
   // первый запуск (профиль пустой) — мастер
   if (wzNeeded()) wzOpen();
 });

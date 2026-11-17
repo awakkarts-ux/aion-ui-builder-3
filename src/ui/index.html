@@ -12,13 +12,6 @@
 </head>
 <body>
   <header class="titlebar">
-    <div class="titlebar__brand"><span class="titlebar__dot"></span></div>
-    <button class="tb-chip" id="cl-btn" type="button" title="Клиент игры">
-      <span class="tb-chip__dot" id="cl-dot"></span>
-      <b id="cl-name">Aion Empire</b>
-      <small id="cl-lang">RUS</small>
-      <img src="assets/figma-header/chevron.svg" alt="" />
-    </button>
     <div class="pset" id="pset">
       <button class="pset__btn" id="pset-btn" aria-haspopup="menu" aria-expanded="false">
         <span class="pset__text"><small>Пресет</small><b id="pset-name">не сохранён</b></span>
@@ -30,9 +23,9 @@
     <div class="titlebar__drag"></div>
     <div class="titlebar__actions">
       <span class="app-version" id="app-version">v—</span>
-      <button class="btn btn--ghost btn--check-update" id="app-check-update">Проверить обновления</button>
+      <button class="btn btn--ghost btn--check-update tb-ico" id="app-check-update" title="Проверить обновления"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 0 1-9.6 3.7M2.5 8a5.5 5.5 0 0 1 9.6-3.7"/><path d="M12.5 1.5v3h-3M3.5 14.5v-3h3"/></svg><span>Проверить обновления</span></button>
       <button class="btn btn--update" id="app-update" hidden>Обновить</button>
-      <button class="btn btn--ghost" id="do-restore"><img src="assets/figma-header/restore.svg" alt="" />Сброс всех настроек</button>
+      <button class="btn btn--ghost tb-ico" id="do-restore" title="Сброс всех настроек"><img src="assets/figma-header/restore.svg" alt="" /><span>Сброс всех настроек</span></button>
       <button class="btn btn--primary" id="do-apply">Собрать и установить</button>
     </div>
     <!-- Системные кнопки окна -->
@@ -55,16 +48,12 @@
       <button class="nav" data-view="skillicons"><span>Иконки</span><em id="badge-skills"></em></button>
       <button class="nav" data-view="hitnum"><span>Цифры урона</span><em id="badge-hitnum"></em></button>
       <button class="nav" data-view="editor"><span>Интерфейс</span><em id="badge-editor"></em></button>
-      <button class="nav" data-view="look"><span>Вид интерфейса</span><em id="badge-look"></em></button>
       <button class="nav" data-view="maps"><span>Карты</span><em id="badge-maps"></em></button>
       <button class="nav" data-view="apply"><span>Сборка</span></button>
 
       <div class="rail__group">Тонкая настройка</div>
       <button class="nav" data-view="classic"><span>Официальный Classic</span><em id="badge-classic"></em></button>
       <button class="nav" data-view="v5"><span>Aion 5.x</span><em id="badge-v5"></em></button>
-      <button class="nav" data-view="skins"><span>Скины элементов</span><em id="badge-skins"></em></button>
-      <button class="nav" data-view="icons" data-pack="uiatlas"><span>Картинки интерфейса</span><em id="badge-uiatlas"></em></button>
-      <button class="nav" data-view="layout"><span>Раскладка окон</span><em id="badge-layout"></em></button>
 
       <div class="rail__spacer"></div>
       <button class="nav" data-view="guide"><span>Инструкция</span></button>
@@ -148,52 +137,6 @@
         </div>
       </section>
 
-      <!-- ================= Раскладка ================= -->
-      <section class="view" data-view="layout">
-        <div class="layout">
-          <div class="layout__side">
-            <div class="search">
-              <input type="text" id="dlg-search" placeholder="Поиск диалога" />
-            </div>
-            <div class="side-opts">
-              <label class="check"><input type="checkbox" id="dlg-hud-only" checked /> только HUD</label>
-              <select id="hud-set" class="sel sel--sm" title="Набор HUD">
-                <option value="hud_s1">набор s1</option>
-                <option value="hud_s2">набор s2</option>
-              </select>
-            </div>
-            <div class="list" id="dlg-list"></div>
-          </div>
-
-          <div class="layout__main">
-            <div class="toolbar">
-              <select id="shot-pick" class="sel" title="Подложка"></select>
-              <label class="check"><input type="checkbox" id="opt-grid" /> сетка</label>
-              <label class="check"><input type="checkbox" id="opt-all" /> показывать все</label>
-              <span class="grow"></span>
-              <span class="hint">тащи мышью · Shift — шаг 10&nbsp;px · стрелки двигают выбранный</span>
-            </div>
-            <div class="notice">
-              Окна HUD, бафы, дебафы, цель и ряды умений игра ставит сама — их место отсюда не
-              меняется, только размер и элементы внутри. Для остальных окон после установки нажми в игре
-              <b>«Расположить окна по умолчанию»</b>. Место карты — в «Виде интерфейса».
-            </div>
-            <div class="canvas-wrap">
-              <div class="canvas-holder">
-              <div class="canvas" id="canvas">
-                <img id="canvas-shot" alt="" />
-                <div class="canvas__grid" id="canvas-grid"></div>
-              </div>
-              </div>
-            </div>
-          </div>
-
-          <aside class="layout__props" id="props">
-            <div class="muted pad">Выбери диалог слева или прямоугольник на поле.</div>
-          </aside>
-        </div>
-      </section>
-
       <!-- ================= Портрет ================= -->
       <section class="view" data-view="portrait">
         <h1>Крупный 3D-портрет</h1>
@@ -245,32 +188,37 @@
         <p class="lede">Клиент берёт три гарнитуры из <code>l10n/&lt;язык&gt;/data/Fonts</code>.
           Подменяем все три одним файлом; азиатская <code>CHU_2002.ttf</code> остаётся штатной,
           иначе пропадут иероглифы.</p>
-        <div class="card">
-          <div class="fnt__head"><b>Готовые шрифты</b><span class="muted">с кириллицей, свободная лицензия OFL — нажмите, чтобы выбрать</span></div>
-          <div class="fnt" id="font-builtin"></div>
-          <p class="fnt__note" id="font-theme-note" hidden></p>
-        </div>
-        <div class="card">
-          <div class="row">
-            <label>Свой файл</label>
-            <input type="text" id="font-path" readonly placeholder="не выбран" />
-            <button class="btn" id="font-pick">Выбрать…</button>
+        <div class="fnt-layout">
+          <div class="fnt__main">
+            <div class="card">
+              <div class="fnt__head"><b>Готовые шрифты</b><span class="muted">с кириллицей, свободная лицензия OFL — нажмите, чтобы выбрать</span></div>
+              <div class="fnt" id="font-builtin"></div>
+              <p class="fnt__note" id="font-theme-note" hidden></p>
+            </div>
+            <div class="card">
+              <div class="row">
+                <label>Свой файл</label>
+                <input type="text" id="font-path" readonly placeholder="не выбран" />
+                <button class="btn" id="font-pick">Выбрать…</button>
+              </div>
+              <div class="row">
+                <label>Применять</label>
+                <label class="check"><input type="checkbox" id="font-on" /> подменять шрифт интерфейса</label>
+              </div>
+              <div class="row">
+                <label>Языки</label>
+                <div id="font-langs" class="chips"></div>
+              </div>
+            </div>
           </div>
-          <div class="row">
-            <label>Применять</label>
-            <label class="check"><input type="checkbox" id="font-on" /> подменять шрифт интерфейса</label>
-          </div>
-          <div class="row">
-            <label>Языки</label>
-            <div id="font-langs" class="chips"></div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="preview" id="font-preview">
-            <div class="preview__big">Абевега Дёрзкий 1234567890</div>
-            <div class="preview__mid">Спираль стрел II · Ловушка шипов IV · Меткий выстрел</div>
-            <div class="preview__small">Нанесение урона 328 · Сопротивление 1240 · Ускорение атаки 12%</div>
-          </div>
+          <aside class="card fnt__side">
+            <b class="hn__ptitle">Предпросмотр</b>
+            <div class="preview" id="font-preview">
+              <div class="preview__big">Абевега Дёрзкий 1234567890</div>
+              <div class="preview__mid">Спираль стрел II · Ловушка шипов IV · Меткий выстрел</div>
+              <div class="preview__small">Нанесение урона 328 · Сопротивление 1240 · Ускорение атаки 12%</div>
+            </div>
+          </aside>
         </div>
       </section>
 
@@ -437,8 +385,8 @@
                 <label class="scrub scrub--color"><span>Жёлтые</span><span class="scrub__cc"><input type="color" id="hn-plate-w" /><input type="text" class="scrub__hex" maxlength="7" spellcheck="false" aria-label="Жёлтые надписи, hex" /></span></label>
               </div>
               <div class="row">
-                <label>Значок</label>
-                <input type="text" id="hn-icon" readonly placeholder="без значка — только текст" />
+                <label>Общий значок</label>
+                <input type="text" id="hn-icon" readonly placeholder="без значка — только текст" title="Для надписей без своего значка" />
                 <button class="btn" id="hn-icon-pick">Картинка…</button>
                 <button class="btn btn--ghost" id="hn-icon-clear" title="убрать значок">×</button>
               </div>
@@ -459,7 +407,7 @@
               <b class="hn__ptitle">Предпросмотр</b>
               <label class="check"><input type="checkbox" id="hn-orig" /> показать родные</label>
             </div>
-            <canvas id="hn-canvas" width="340" height="540"></canvas>
+            <div class="hn__scroll"><canvas id="hn-canvas" width="340" height="540"></canvas></div>
             <div class="muted" id="hn-pnote" hidden></div>
           </aside>
         </div>
@@ -738,11 +686,6 @@
       <section class="view" data-view="apply">
         <h1>Сборка</h1>
         <p class="lede">Игра читает паки только при запуске — после установки перезапусти клиент.</p>
-        <div class="notice">
-          Если менял раскладку панелей: после запуска зайди в <b>Настройки</b> и нажми
-          <b>«Расположить окна по умолчанию»</b>. Клиент хранит своё расположение окон
-          отдельно и без сброса перекрывает им наши координаты.
-        </div>
         <div class="card">
           <div id="apply-summary" class="summary"></div>
         </div>
@@ -753,16 +696,6 @@
             <span class="muted">Окна HUD, опись деталей и атласы — штатные и официального Classic — одним zip-архивом. Клиент только читается.</span>
             <button class="btn" id="design-dump">Выгрузить…</button>
           </div>
-        </div>
-        <h2>Разметка окон HUD</h2>
-        <div class="card">
-          <div class="row">
-            <label class="check"><input type="checkbox" id="calib-on" /> обвести окна HUD цветными рамками и увеличить их</label>
-          </div>
-          <div class="bf__note">Для конструктора раскладки: одна сборка с разметкой и скриншот из игры показывают,
-            за какой угол игра держит каждое окно и куда оно растёт. Рамки видны только в игре; после скриншота
-            выключи и собери заново. Окна увеличены на 200×100 и прозрачны.</div>
-          <div class="calib__legend" id="calib-legend"></div>
         </div>
         <h2>Журнал</h2>
         <pre class="log" id="apply-log">пока пусто</pre>

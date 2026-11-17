@@ -23,10 +23,6 @@ contextBridge.exposeInMainWorld('api', {
     pick: () => call('client:pick'),
     reveal: (rel) => call('client:reveal', rel),
   },
-  catalogue: {
-    load: () => call('catalogue:load'),
-    xml: (id) => call('catalogue:xml', id),
-  },
   profile: {
     get: () => call('profile:get'),
     sync: () => call('profile:sync'),
@@ -125,9 +121,5 @@ contextBridge.exposeInMainWorld('api', {
     stage: (payload) => call('pack:stage', payload),
     export: (pack, names) => call('pack:export', { pack, names }),
     pickFile: () => call('image:pick'),
-  },
-  shots: {
-    list: () => call('shot:list'),
-    read: (name) => call('shot:read', name),
   },
 });

@@ -3,10 +3,11 @@
 $('#w-min').onclick = () => window.api.window.minimize();
 $('#w-max').onclick = () => window.api.window.toggle();
 $('#w-close').onclick = () => window.api.window.close();
-if ($('#cl-btn')) $('#cl-btn').onclick = () => $('.nav[data-view="client"]')?.click();
 
 /** Значки разделов — линейные, в плашке перед названием (редизайн 01.10.2026). */
 const NAV_ICONS = {
+  home: '<path d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5H15v-6h-6v6H5.5A1.5 1.5 0 0 1 4 19z"/>',
+  guide: '<path d="M5 4.5h9.5L19 9v10.5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-14a1 1 0 0 1 1-1z"/><path d="M14 4.5V9h5M8 13h8M8 16.5h5"/>',
   client: '<path d="M3 7.5A1.5 1.5 0 0 1 4.5 6H9l2 2h8.5A1.5 1.5 0 0 1 21 9.5v8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/>',
   editor: '<path d="M5 4l6.5 16 2.3-6.7L20.5 11z"/>',
   look: '<path d="M12 3 3 8l9 5 9-5z"/><path d="m3 13 9 5 9-5"/>',
@@ -31,28 +32,23 @@ $$('.nav').forEach((b) => {
   }
 });
 
-$$('.nav').forEach((b) => {
-  b.onclick = () => {
-    $$('.nav').forEach((x) => x.classList.toggle('is-active', x === b));
-    $$('.view').forEach((v) => v.classList.toggle('is-active', v.dataset.view === b.dataset.view));
-    if (b.dataset.view === 'layout') fitCanvas();
-    if (b.dataset.view === 'icons') {
-      if (b.dataset.pack && b.dataset.pack !== icons.pack) {
-        icons.pack = b.dataset.pack;
-        $('#icon-search').value = '';
-      }
-      loadIcons();
-    }
-    if (b.dataset.view === 'skillicons') loadIconsSection(); // умения или предметы — что было открыто
-    if (b.dataset.view === 'hitnum') loadHitnum();
-    if (b.dataset.view === 'buffs') loadBuffs();
-    if (b.dataset.view === 'editor') loadEditor();
-    if (b.dataset.view === 'look') loadLook();
-    if (b.dataset.view === 'maps') loadMaps();
-    if (b.dataset.view === 'portrait') renderPortrait();
-    if (b.dataset.view === 'skins') loadSkins();
-    if (b.dataset.view === 'v5') loadV5();
-    if (b.dataset.view === 'classic') loadClassic();
-    if (b.dataset.view === 'apply') renderSummary();
-  };
-});
+/** Открыть раздел. Работает и для разделов без пункта в меню («Вид интерфейса»
+ *  открывается с карточки на Главной): тогда в меню ничего не подсвечено. */
+function showView(view) {
+  $$('.nav').forEach((x) => x.classList.toggle('is-active', x.dataset.view === view));
+  $$('.view').forEach((v) => v.classList.toggle('is-active', v.dataset.view === view));
+  if (view === 'icons') loadIcons();
+  if (view === 'skillicons') loadIconsSection(); // умения или предметы — что было открыто
+  if (view === 'hitnum') loadHitnum();
+  if (view === 'buffs') loadBuffs();
+  if (view === 'editor') loadEditor();
+  if (view === 'look') loadLook();
+  if (view === 'maps') loadMaps();
+  if (view === 'portrait') renderPortrait();
+  if (view === 'skins') loadSkins();
+  if (view === 'v5') loadV5();
+  if (view === 'classic') loadClassic();
+  if (view === 'apply') renderSummary();
+}
+
+$$('.nav').forEach((b) => { b.onclick = () => showView(b.dataset.view); });

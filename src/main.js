@@ -269,30 +269,6 @@ ipcMain.handle('client:reveal', (_e, rel) => {
   shell.showItemInFolder(rel ? client.abs(rel) : client.root);
 });
 
-// ---- опись диалогов ------------------------------------------------------
-
-ipcMain.handle('catalogue:load', () => {
-  if (!client) throw new Error('клиент не выбран');
-  const paks = {};
-  for (const key of Object.keys(PAKS)) {
-    if (key === 'ui') continue; // там не диалоги, а экраны и тексты
-    try {
-      paks[key] = client.original(key);
-    } catch (e) {
-      // один битый пак не должен ронять всю опись
-    }
-  }
-  return hudlib.catalogue(paks);
-});
-
-ipcMain.handle('catalogue:xml', (_e, id) => {
-  const cut = id.indexOf('/');
-  const files = client.original(id.slice(0, cut));
-  const data = files.get(id.slice(cut + 1));
-  if (!data) throw new Error('нет записи ' + id);
-  return bxml.parse(data).root.toXml();
-});
-
 // ---- профиль -------------------------------------------------------------
 
 ipcMain.handle('profile:get', () => migrate(readJson(profilePath(), null)));
@@ -1323,21 +1299,3 @@ ipcMain.handle('image:pick', async () => {
 
 // ---- подложка для редактора ---------------------------------------------
 
-ipcMain.handle('shot:list', () => {
-  if (!client) return [];
-  const dir = client.abs('Screenshot');
-  if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir)
-    .filter((f) => /\.(jpg|jpeg|png)$/i.test(f))
-    .slice(-40)
-    .reverse();
-});
-
-ipcMain.handle('shot:read', (_e, name) => {
-  if (!client || typeof name !== 'string' || !/^[^\\/]+\.(?:jpg|jpeg|png)$/i.test(name)) return null;
-  const file = relativePath(client.abs('Screenshot'), name, 'screenshot');
-  if (!fs.existsSync(file)) return null;
-  const ext = path.extname(name).slice(1).toLowerCase();
-  return `data:image/${ext === 'jpg' ? 'jpeg' : ext};base64,` +
-    fs.readFileSync(file).toString('base64');
-});

@@ -149,9 +149,7 @@ async function homeClassic(btn) {
 }
 
 function homeGo(view) {
-  const target = view === 'style' ? 'look' : view;
-  const b = document.querySelector(`.nav[data-view="${target}"]`);
-  if (b) b.click();
+  showView(view === 'style' ? 'look' : view);
 }
 
 function renderHome() {
@@ -284,8 +282,7 @@ const GUIDE_ITEMS = [
   ['hitnum', 'Цифры урона', 'Размер цифр урона до 250%, их цвет и вид — для каждого набора отдельно или для всех сразу.'],
   ['editor', 'Интерфейс', 'Экран предпросмотра: выберите элемент и замените его деталью другого вида или своей картинкой.'],
   ['maps', 'Карты', 'Своя картинка вместо большой карты зоны.'],
-  ['apply', 'Сборка', 'Сводка того, что попадёт в игру, журнал последней сборки и разметка окон HUD.'],
-  ['icons', 'Картинки интерфейса', 'Тонкая настройка: любая картинка из атласов интерфейса по отдельности.'],
+  ['apply', 'Сборка', 'Сводка того, что попадёт в игру и журнал последней сборки.'],
 ];
 
 const GUIDE_RULES = [
@@ -308,9 +305,7 @@ function renderGuide() {
   $('#gd-rules').innerHTML = GUIDE_RULES.map(([t, p]) => `<div class="card"><b>${esc(t)}</b><p>${esc(p)}</p></div>`).join('');
   $$('#gd-grid [data-go]').forEach((b) => {
     b.onclick = () => {
-      const target = b.dataset.go === 'style' ? 'look' : b.dataset.go;
-      const nav = document.querySelector(`.nav[data-view="${target}"]`);
-      if (nav) nav.click();
+      homeGo(b.dataset.go);
     };
   });
 }

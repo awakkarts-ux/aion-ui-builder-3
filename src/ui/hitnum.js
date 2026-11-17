@@ -33,8 +33,7 @@ const hn = {
   orig: new Map(), // ключ -> родная картинка (для «показать родные» и цветов)
   defColors: {}, // цвета родных цифр
   fontReady: '', // какой свой шрифт загружен
-  icon: null, // ImageBitmap значка надписей
-  iconFor: '',
+  icons: new Map(), // путь картинки -> ImageBitmap (значки надписей)
 };
 
 function hnDefaults() {
@@ -44,7 +43,8 @@ function hnDefaults() {
     gradient: { on: false, color: '#ffffff', amount: 45 },
     outline: { width: 0, color: '#000000' },
     shadow: { dx: 1, dy: 1.5, blur: 0.5, color: '#000000', alpha: 75 },
-    plates: { on: true, text: {}, r: '#d51f1f', w: '#ffe21a', icon: '' },
+    // icon — общий значок (до 17.11.2026 был один на все), icons — свой у надписи, важнее общего
+    plates: { on: true, text: {}, r: '#d51f1f', w: '#ffe21a', icon: '', icons: {} },
     staged: '', // подпись настроек, из которых подготовлены картинки
     keys: [], // какие картинки набора подготовил конструктор — только их и убираем
   };
@@ -61,6 +61,7 @@ function hnState() {
   if (p && !('plateScale' in p)) s.plateScale = s.scale;
   for (const k of ['gradient', 'outline', 'shadow', 'plates']) s[k] = Object.assign({}, d[k], p && p[k]);
   s.plates.text = Object.assign({}, s.plates.text);
+  s.plates.icons = Object.assign({}, s.plates.icons);
   s.colors = Object.assign({}, s.colors);
   s.scales = Object.assign({}, s.scales);
   s.keys = Array.isArray(s.keys) ? s.keys : [];
@@ -215,7 +216,7 @@ function hnDraw(s, text, w, h, fill, align, fixedPx, icon) {
  * Общий размер шрифта надписей для холстов одной высоты: как у родных, буквы
  * «Блок!» и «Парировано!» одного роста — длинная надпись задаёт размер всем.
  */
-function hnPlatePx(s, icon) {
+function hnPlatePx(s) {
   const pad = hnPad(s);
   const byH = new Map();
   for (const r of hn.rows) {
@@ -227,6 +228,7 @@ function hnPlatePx(s, icon) {
     const [w, h] = hnCanvas(size, hnScale(s, { kind: 'plate', plate: what.plate }));
     const m = hnMeasure(s, text);
     const textH = m.a + m.d;
+    const icon = hnPlateIconImg(s, what.plate);
     const fullW = m.l + m.r + (icon ? textH * 1.15 * (icon.width / icon.height) + textH * 0.15 : 0);
     const px = Math.max(4, Math.min((h - 2 * pad) / textH, (w - 2 * pad) / fullW) * 100 * hnFill(s.plateScale));
     byH.set(h, Math.min(byH.get(h) || Infinity, px));
@@ -237,8 +239,7 @@ function hnPlatePx(s, icon) {
 function hnRenderAll(s) {
   const out = new Map();
   const digitPx = new Map(); // размер холста -> px
-  const icon = s.plates.icon && hn.iconFor === s.plates.icon ? hn.icon : null;
-  const platePx = s.plates.on ? hnPlatePx(s, icon) : new Map();
+  const platePx = s.plates.on ? hnPlatePx(s) : new Map();
   for (const r of hn.rows) {
     const what = hnWhat(r.short);
     const size = hn.sizes.get(r.key);
@@ -249,7 +250,7 @@ function hnRenderAll(s) {
       if (!text) continue;
       const [w, h] = hnCanvas(size, hnScale(s, { kind: 'plate', plate: what.plate }));
       out.set(r.key, hnDraw(s, text, w, h, what.variant === 'r' ? s.plates.r : s.plates.w, 'right',
-        platePx.get(h), icon));
+        platePx.get(h), hnPlateIconImg(s, what.plate)));
       continue;
     }
     const [w, h] = hnCanvas(size, hnScale(s, what));
@@ -311,10 +312,14 @@ async function hnEnsureFont(s) {
   }
 }
 
-async function hnEnsureIcon(s, data) {
-  const f = s.plates.icon;
-  if (!f) { hn.icon = null; hn.iconFor = ''; return; }
-  if (hn.iconFor === f && hn.icon) return;
+/** Путь значка надписи: свой у надписи, иначе общий. */
+const hnPlateIcon = (s, plate) => (s.plates.icons && s.plates.icons[plate]) || s.plates.icon || '';
+/** Загруженный значок надписи (или null — без значка / не прочитался). */
+const hnPlateIconImg = (s, plate) => hn.icons.get(hnPlateIcon(s, plate)) || null;
+
+/** Прочитать картинку значка; data — base64 из окна выбора файла (тогда диск не трогаем). */
+async function hnLoadIcon(f, data) {
+  if (!f || hn.icons.has(f)) return;
   try {
     let blob;
     if (data) {
@@ -325,12 +330,15 @@ async function hnEnsureIcon(s, data) {
     } else {
       blob = await (await fetch('file:///' + f.replace(/\\/g, '/').replace(/^\/+/, ''))).blob();
     }
-    hn.icon = await createImageBitmap(blob);
-    hn.iconFor = f;
+    hn.icons.set(f, await createImageBitmap(blob));
   } catch (e) {
-    hn.icon = null;
-    hn.iconFor = '';
+    toast('значок не прочитался: ' + f, true);
   }
+}
+
+/** Все значки, нужные надписям, — в память. */
+async function hnEnsureIcon(s) {
+  for (const [p] of HN_PLATES) await hnLoadIcon(hnPlateIcon(s, p));
 }
 
 /* ---------- окно ---------- */
@@ -407,10 +415,39 @@ function hnFillForm(s) {
     i.oninput = () => { hnState().colors[i.dataset.c] = i.value; hnChanged(); };
   });
   $('#hn-plates-on').checked = !!s.plates.on;
-  $('#hn-plates').innerHTML = HN_PLATES.map(([p, def]) =>
-    `<span>${p}</span><input type="text" data-p="${p}" value="${esc(hnPlateText(s, p))}" placeholder="${esc(def)}" />`).join('');
+  $('#hn-plates').innerHTML = HN_PLATES.map(([p, def]) => {
+    const own = s.plates.icons[p] || '';
+    const file = hnPlateIcon(s, p);
+    const name = file ? file.split(/[\\/]/).pop() : '';
+    return `<span>${p}</span><input type="text" data-p="${p}" value="${esc(hnPlateText(s, p))}" placeholder="${esc(def)}" />` +
+      `<span class="hn__pic${file ? ' is-on' : ''}" title="${esc(own ? file : file ? 'общий значок: ' + file : 'без значка')}">` +
+      `<canvas width="24" height="24" data-ic="${p}"></canvas><button class="btn btn--ghost" data-pick="${p}">` +
+      `${file ? esc(own ? name : 'общий') : 'Значок…'}</button>` +
+      `${own ? `<button class="btn btn--ghost hn__x" data-clear="${p}" title="убрать свой значок">×</button>` : ''}</span>`;
+  }).join('');
   $('#hn-plates').querySelectorAll('input').forEach((i) => {
     i.oninput = () => { hnState().plates.text[i.dataset.p] = i.value; hnChanged(); };
+  });
+  $('#hn-plates').querySelectorAll('canvas[data-ic]').forEach((cv) => {
+    const im = hnPlateIconImg(s, cv.dataset.ic);
+    if (!im) return;
+    const k = Math.min(24 / im.width, 24 / im.height);
+    cv.getContext('2d').drawImage(im, (24 - im.width * k) / 2, (24 - im.height * k) / 2, im.width * k, im.height * k);
+  });
+  $('#hn-plates').querySelectorAll('[data-pick]').forEach((b) => {
+    b.onclick = () => guard(async () => {
+      const picked = await window.api.packs.pickFile();
+      if (!picked) return;
+      const st = hnState();
+      st.plates.icons[b.dataset.pick] = picked.path;
+      hn.icons.delete(picked.path); // файл могли перерисовать — читаем заново
+      await hnLoadIcon(picked.path, picked.data);
+      hnFillForm(st);
+      hnChanged();
+    });
+  });
+  $('#hn-plates').querySelectorAll('[data-clear]').forEach((b) => {
+    b.onclick = () => { delete hnState().plates.icons[b.dataset.clear]; hnFillForm(hnState()); hnChanged(); };
   });
   $('#hn-plate-r').value = s.plates.r;
   $('#hn-plate-w').value = s.plates.w;
@@ -471,11 +508,12 @@ function hnBind() {
     if (!picked) return;
     const s = hnState();
     s.plates.icon = picked.path;
-    await hnEnsureIcon(s, picked.data);
+    hn.icons.delete(picked.path);
+    await hnLoadIcon(picked.path, picked.data);
     hnFillForm(s);
     hnChanged();
   });
-  $('#hn-icon-clear').onclick = () => { hnState().plates.icon = ''; hn.icon = null; hn.iconFor = ''; hnFillForm(hnState()); hnChanged(); };
+  $('#hn-icon-clear').onclick = () => { hnState().plates.icon = ''; hnFillForm(hnState()); hnChanged(); };
   $('#hn-colors-reset').onclick = () => { hnState().colors = {}; hnFillForm(hnState()); hnChanged(); };
   $('#hn-stage').onclick = () => guard(async () => {
     const s = hnState();
@@ -552,18 +590,20 @@ async function hnEnsureStaged() {
 
 /* ---------- предпросмотр ---------- */
 
+/**
+ * Предпросмотр в настоящих пикселях: цифры и надписи в том размере, в каком
+ * их картинки уйдут в игру. Раньше всё окно ужималось одним масштабом, и при
+ * 200% цифр надписи на 100% выглядели вдвое меньше — будто уменьшились сами.
+ * Не влезает — прокрутка, а не уменьшение.
+ */
 function hnPreview() {
   const cv = $('#hn-canvas');
-  const g = cv.getContext('2d');
-  g.fillStyle = '#26301f';
-  g.fillRect(0, 0, cv.width, cv.height);
-  // «трава» — фон, на котором видно тень и обводку
-  const bg = g.createLinearGradient(0, 0, cv.width, cv.height);
-  bg.addColorStop(0, 'rgba(90,120,70,.35)');
-  bg.addColorStop(1, 'rgba(20,30,20,.2)');
-  g.fillStyle = bg;
-  g.fillRect(0, 0, cv.width, cv.height);
-  if (!hn.rows) return;
+  if (!hn.rows) {
+    const g = cv.getContext('2d');
+    g.fillStyle = '#26301f';
+    g.fillRect(0, 0, cv.width, cv.height);
+    return;
+  }
   const s = hnState();
   const useOrig = $('#hn-orig').checked;
   const imgs = useOrig ? null : hnRenderAll(s);
@@ -582,44 +622,70 @@ function hnPreview() {
     }
     return imgs.get(r.key) || null;
   };
+  const dim = (im) => (im ? im.shown || [im.width, im.height] : [0, 0]);
+
+  // раскладка: строка цифр на цвет — знаки с нахлёстом, как в бою; ниже надписи парами
+  const GAP = 8;
+  const rows = HN_COLORS.map(([c]) => {
+    const list = [];
+    if (c !== 'gray') list.push(pick(`plus_${c}.dds`));
+    for (const d of '1234567890') list.push(pick(`${d}_${c}.dds`));
+    const h = Math.max(0, ...list.map((im) => dim(im)[1]));
+    const step = Math.max(0, ...list.map((im) => dim(im)[0])) * 21 / 32;
+    return { list, h, step };
+  });
+  const plates = s.plates.on || useOrig ? HN_PLATES.map(([p]) => [pick(`${p}_r.dds`), pick(`${p}_w.dds`)]) : [];
+  let W = 0, H = GAP;
+  for (const r of rows) {
+    const last = r.list.length ? dim(r.list[r.list.length - 1])[0] : 0;
+    W = Math.max(W, GAP + r.step * (r.list.length - 1) + last + GAP);
+    H += r.h + 4;
+  }
+  H += GAP;
+  for (const pair of plates) for (const im of pair) {
+    W = Math.max(W, GAP + dim(im)[0] + GAP);
+    H += dim(im)[1] + 2;
+  }
+  H += GAP;
+  cv.width = Math.max(320, Math.ceil(W));
+  cv.height = Math.max(200, Math.ceil(H));
+  cv.style.width = cv.width + 'px';
+  cv.style.height = cv.height + 'px';
+
+  const g = cv.getContext('2d');
+  // «трава» — фон, на котором видно тень и обводку
+  g.fillStyle = '#26301f';
+  g.fillRect(0, 0, cv.width, cv.height);
+  const bg = g.createLinearGradient(0, 0, cv.width, cv.height);
+  bg.addColorStop(0, 'rgba(90,120,70,.35)');
+  bg.addColorStop(1, 'rgba(20,30,20,.2)');
+  g.fillStyle = bg;
+  g.fillRect(0, 0, cv.width, cv.height);
+
   const tmp = document.createElement('canvas');
-  const blit = (im, x, y, sc) => {
+  const blit = (im, x, y) => {
     if (!im) return;
     tmp.width = im.width;
     tmp.height = im.height;
     tmp.getContext('2d').putImageData(im, 0, 0);
-    const [w, h] = im.shown || [im.width, im.height];
-    g.imageSmoothingEnabled = sc !== 1 || w !== im.width;
-    g.drawImage(tmp, x, y, w * sc, h * sc);
+    const [w, h] = dim(im);
+    g.imageSmoothingEnabled = w !== im.width;
+    g.drawImage(tmp, Math.round(x), Math.round(y), w, h);
   };
-  // картинки крупнее родных: всё окно предпросмотра уменьшаем одним масштабом,
-  // чтобы влезло и цифры с надписями остались в верном соотношении
-  const gd = useOrig ? 1 : hnGrow(s.scale);
-  const gp = useOrig || !s.plates.on ? 1 : hnGrow(s.plateScale);
-  const v = 1 / Math.max(gd, gp);
+  let y = GAP;
+  for (const r of rows) {
+    r.list.forEach((im, i) => blit(im, GAP + i * r.step, y + (r.h - dim(im)[1]) / 2));
+    y += r.h + 4;
+  }
+  y += GAP;
+  // надписи прижаты вправо, как в игре: красная, под ней жёлтая
+  for (const pair of plates) for (const im of pair) {
+    blit(im, GAP, y);
+    y += dim(im)[1] + 2;
+  }
   const note = $('#hn-pnote');
-  note.hidden = v === 1;
-  note.textContent = `уменьшено в ${(1 / v).toFixed(1).replace('.', ',')} раза — в игре крупнее`;
-  // цифры: как в бою — «+12 345» знаками по 32 px с нахлёстом
-  const dk = gd * v;
-  const step = 21 * dk;
-  HN_COLORS.forEach(([c], i) => {
-    const y = 8 + i * 36 * dk;
-    let x = 8;
-    if (c !== 'gray') blit(pick(`plus_${c}.dds`), x, y, v);
-    x += step;
-    for (const d of '1234567890') { blit(pick(`${d}_${c}.dds`), x, y, v); x += step; }
-  });
-  // надписи — уменьшенные, две в ряд: красная и жёлтая
-  const pk = gp * v;
-  const py = 8 + HN_COLORS.length * 36 * dk + 4;
-  const ph = Math.max(...[...hn.sizes.values()].filter(([w]) => w > 64).map(([, h]) => h), 70);
-  const sc = 0.6;
-  HN_PLATES.forEach(([p], i) => {
-    const y = py + i * Math.ceil(ph * sc * pk + 2);
-    blit(pick(`${p}_r.dds`), 4, y, sc * v);
-    blit(pick(`${p}_w.dds`), 4 + 168 * pk, y, sc * v);
-  });
+  note.hidden = false;
+  note.textContent = 'В настоящих пикселях: такими картинки уйдут в игру. Не влезает — прокрутите.';
 }
 
 hnBind();

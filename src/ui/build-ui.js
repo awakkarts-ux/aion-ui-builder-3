@@ -46,7 +46,6 @@ function renderSummary() {
     ['Мини-карта', p.radar && p.radar.square ? 'квадратная' : 'круглая'],
     ['Свои карты', Object.keys(p.maps || {}).length || 'нет'],
     ['Окна HUD двигаются мышью', Object.keys(p.hudFree || {}).join(', ') || 'нет'],
-    ['Разметка окон HUD', p.calib && p.calib.on ? 'включена — окна в цветных рамках' : 'нет'],
     ['Раскладка «Стиля Aion»', p.arrange && p.arrange.mapTopRight ? 'карта справа вверху' : 'как в игре'],
     ['Окон бафов изменено', Object.keys(p.buffs || {}).length],
     ['Цифр урона', p.hitnum && p.hitnum.enabled

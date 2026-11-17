@@ -196,6 +196,7 @@ if (!window.api) {
     },
     profile: {
       get: async () => saved,
+      sync: async () => null,
       save: async (p) => { saved = p; return true; },
       export: async () => 'C:\\demo\\profile.json',
       import: async () => null,

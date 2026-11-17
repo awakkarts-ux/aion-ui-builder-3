@@ -7,44 +7,11 @@
   padding: 12px 12px 12px 13px;
   background: var(--bg-base);
 }
-.titlebar__brand {
-  width: 54px;
-  height: 54px;
-  flex: none;
-  display: grid;
-  place-items: center;
-  border-radius: var(--radius);
-  background: var(--bg-surface);
-}
-.titlebar__brand .titlebar__dot {
-  width: 20px;
-  height: 20px;
-  border-radius: 7px;
-}
-.tb-chip {
-  height: 54px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex: none;
-  padding: 0 16px;
-  border: 0;
-  border-radius: var(--radius);
-  background: var(--bg-surface);
-  color: var(--text-strong);
-  font: inherit;
-  cursor: pointer;
-}
-.tb-chip__dot { width: 8px; height: 8px; border-radius: 4px; background: var(--green); }
-.tb-chip__dot.is-bad { background: var(--red); }
-.tb-chip b { font-size: 13px; font-weight: 600; white-space: nowrap; }
-.tb-chip small { color: var(--text-faint); font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
-.tb-chip img, .pset__chev { width: 16px; height: 16px; flex: none; }
-.titlebar > .pset { width: auto; flex: none; }
+.titlebar > .pset { width: auto; flex: 0 1 260px; min-width: 180px; }
 .titlebar > .pset .pset__btn {
   height: 54px;
-  width: auto;
-  min-width: 250px;
+  width: 100%;
+  min-width: 0;
   padding: 0 16px;
   border-radius: var(--radius);
   background: var(--bg-surface);
@@ -59,11 +26,11 @@
   transform-origin: 50% 0;
 }
 .titlebar__drag { min-width: 0; padding: 0; }
-.titlebar__actions { gap: 8px; padding: 0; }
+.titlebar__actions { gap: 8px; padding: 0; flex: none; }
 .titlebar__actions > .btn { height: 54px; padding: 0 32px; border-radius: var(--radius); font-size: 14px; }
 .titlebar__actions > .btn img { width: 16px; height: 16px; margin-right: 8px; vertical-align: -3px; }
 .titlebar__actions > .btn--primary { padding-inline: 32px; }
-.titlebar__buttons { gap: 4px; }
+.titlebar__buttons { gap: 4px; flex: none; }
 .titlebar__buttons .wbtn {
   width: 54px;
   height: 54px;
@@ -79,4 +46,24 @@
 .titlebar__buttons #w-close img { width: 12px; height: 12px; }
 .titlebar__buttons #w-max img { width: 10px; height: 10px; }
 .shell { height: calc(100% - 78px); }
+.titlebar > .pset .pset__text { min-width: 0; }
+.titlebar > .pset .pset__text b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Кнопки шапки со значком: в узком окне остаётся только значок, подпись — в title.
+   Так в 1040 px влезают все кнопки, включая «Перезапустить и обновить» и кнопки окна. */
+.titlebar__actions > .btn { display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; }
+.titlebar__actions > .btn[hidden] { display: none; }
+.titlebar__actions > .tb-ico svg { width: 16px; height: 16px; margin-right: 8px; flex: none; }
+.titlebar__actions > .tb-ico img { vertical-align: 0; }
+/* пока есть обновление, его кнопка заменяет «Проверить обновления» */
+.titlebar__actions:has(#app-update:not([hidden])) #app-check-update { display: none; }
+@media (max-width: 1365px) {
+  .titlebar__actions > .tb-ico { width: 54px; padding: 0; }
+  .titlebar__actions > .tb-ico > span { display: none; }
+  .titlebar__actions > .tb-ico img, .titlebar__actions > .tb-ico svg { margin-right: 0; }
+  .titlebar__actions > .btn--primary, .titlebar__actions > .btn--update { padding-inline: 24px; }
+}
+@media (max-width: 1180px) {
+  .app-version { display: none; }
+}
 

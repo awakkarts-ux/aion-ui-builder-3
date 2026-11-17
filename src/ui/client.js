@@ -5,12 +5,6 @@ function setClient(info) {
   state.languages = info.languages || [];
   $('#client-path').value = info.root || '';
   $('#tb-path').textContent = info.root || 'клиент не выбран';
-  const chipName = $('#cl-name');
-  const chipDot = $('#cl-dot');
-  const chipLang = $('#cl-lang');
-  if (chipName) chipName.textContent = info.root ? String(info.root).split(/[\\/]/).filter(Boolean).slice(-2, -1)[0] || 'клиент' : 'клиент не выбран';
-  if (chipDot) chipDot.className = 'tb-chip__dot' + (info.ok ? ' is-ok' : info.root ? ' is-bad' : '');
-  if (chipLang) chipLang.textContent = (state.languages[0] || 'rus').toUpperCase();
   const st = $('#client-state');
   if (info.ok) {
     st.className = 'state ok';
@@ -25,8 +19,6 @@ function setClient(info) {
   renderClientLangs();
   renderFontLangs();
   if (info.ok) {
-    loadCatalogue();
-    loadShots();
     refreshStatus();
     renderResetPlan();
     // разделы, открытые до того, как нашёлся клиент, перерисуются сами

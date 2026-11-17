@@ -302,7 +302,6 @@ function drawStatus(cv) {
   dim(cv, x + ST.hp[0], y + ST.hp[1], ST.hp[2], ST.hp[3], HPC);
   segs(cv, x + ST.mp[0], y + ST.mp[1], ST.mp[2], ST.mp[3], SEG.st, 'dim');
   dim(cv, x + ST.dp[0], y + ST.dp[1], ST.dp[2], ST.dp[3], DPC);
-  cv.text(x + ST.dp[0], y + ST.dp[1] + 7, 'DP', DPC);
 }
 
 /** Карточка участника: щиток, тусклые дорожки. Без подложки. */
@@ -336,21 +335,23 @@ function drawArrow(cv, ax, ay, up, c) {
   }
 }
 
-/** Кольцо мини-карты: тонкий красный круг, риски, «N». */
+/**
+ * Мини-карта: у официального по краю маски своё тонкое кольцо (тема его
+ * перекрашивает). Большое своё кольцо в 0.1.17 давало второй круг вокруг —
+ * теперь только риски по сторонам света на радиусе видимой карты
+ * (замерено по скриншоту: ~88 единиц от центра круга окна).
+ */
 function drawRadar(cv) {
-  const { x, y, w, h } = A.radar;
+  const { x, y } = A.radar;
   const cx = x + 121.5;
   const cy = y + 120.5;
-  for (let j = 0; j < h; j++) {
-    for (let i = 0; i < w; i++) {
-      const d = Math.hypot(x + i - cx, y + j - cy);
-      if (Math.abs(d - 98.5) < 0.75) cv.dot(x + i, y + j, RED, 235);
-    }
-  }
+  const R = 88;
   for (const [ddx, ddy] of [[1, 0], [-1, 0], [0, 1]]) {
-    cv.rect(Math.round(cx + ddx * 98.5) - 2, Math.round(cy + ddy * 98.5) - 2, 4, 4, RED);
+    const px = Math.round(cx + ddx * (R + 3));
+    const py = Math.round(cy + ddy * (R + 3));
+    if (ddx) cv.rect(px - 3, py - 1, 6, 2, RED); else cv.rect(px - 1, py - 3, 2, 6, RED);
   }
-  cv.text(Math.round(cx) - 2, Math.round(cy - 98.5) - 12, 'N', YEL);
+  // «N» у официального своя (на кольце) — вторую не рисуем
 }
 
 /** Атлас темы (DDS). */
@@ -462,7 +463,8 @@ const fr = ([x, y, w, h]) => ({ x, y, w, h });
 const dialogOf = (root) => [...root.walk()].find((n) => n.name === 'Dialog');
 const widgets = (n) => n.kids.filter((k) => k.name === 'Widget');
 const byName = (n, name) => widgets(n).find((k) => k.attrs.get('name') === name);
-const image = (frame, skinName) => node('Widget', { frame: frame.join(','), type: 'image', flag: 'transparent' }, [node('Skin', { name: skinName })]);
+// флаг transparent у виджета игра понимает как «не рисовать» (0.1.17: зазоры сегментов MP не появились) — без него
+const image = (frame, skinName) => node('Widget', { name: skinName, frame: frame.join(','), type: 'image' }, [node('Skin', { name: skinName })]);
 /** Вставить картинку сразу после виджета (поверх него, под следующими). */
 const insertAfter = (parent, w, img) => { parent.kids.splice(parent.kids.indexOf(w) + 1, 0, img); };
 const cyanText = (w) => { w.attrs.set('text_color', '0.32,0.95,0.93,1.0'); w.attrs.set('halign', 'center'); w.attrs.set('valign', 'middle'); };

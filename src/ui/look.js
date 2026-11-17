@@ -17,7 +17,7 @@ const LK_FREE = [['buffs', 'бафы'], ['debuffs', 'дебафы'], ['radar', '
 
 /** Открыть «Вид интерфейса». */
 function openStyle() {
-  $('.nav[data-view="look"]').click();
+  showView('look');
 }
 
 /** Стиль поменялся — экран предпросмотра собрать заново (если он открыт). */
