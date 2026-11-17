@@ -199,6 +199,7 @@ if (!window.api) {
       save: async (p) => { saved = p; return true; },
       export: async () => 'C:\\demo\\profile.json',
       import: async () => null,
+      resetAll: async () => { saved = { layout: {}, font: { enabled: false, file: '', langs: [] }, packs: { skills: {}, hitnum: {} }, lang: 'rus' }; return { restored: ['data/ui/ui.pak'], backup: 'C:\\demo\\profile-backups\\profile.json' }; },
     },
     build: {
       // как настоящая: несколько секунд, шаги журнала событиями

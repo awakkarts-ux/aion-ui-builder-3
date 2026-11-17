@@ -33,6 +33,7 @@ contextBridge.exposeInMainWorld('api', {
     save: (p) => call('profile:save', p),
     export: (p) => call('profile:export', p),
     import: () => call('profile:import'),
+    resetAll: () => call('profile:resetAll'),
   },
   log: {
     error: (info) => call('log:error', info),

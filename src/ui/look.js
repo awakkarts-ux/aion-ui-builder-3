@@ -173,6 +173,23 @@ function renderLook() {
     note.querySelector('button').onclick = () => $('.nav[data-view="classic"]').click();
     grid.appendChild(note);
   }
+  // Classic есть, но все источники его деталей выключены в «Тонкой настройке» —
+  // у групп 0 деталей и кнопки «Classic» серые (так было у пользователя 17.11)
+  const rules = clState().rules || {};
+  const srcOff = ['v3', 'same'].every((k) => rules[k] === false);
+  if (lk.plan.classicOk && srcOff) {
+    const note = document.createElement('div');
+    note.className = 'card lk__card';
+    note.innerHTML = '<div class="lk__head"><b>Детали Classic выключены</b>' +
+      '<small>В «Тонкой настройке» сняты все источники деталей официального Classic — поэтому у него 0 и выбрать его нельзя.</small></div>' +
+      '<div class="row"><button class="btn btn--primary">Включить</button></div>';
+    note.querySelector('button').onclick = () => {
+      clState().rules = {};
+      saveProfile();
+      guard(() => loadLook(true));
+    };
+    grid.appendChild(note);
+  }
   for (const g of lk.plan.groups) {
     const any = g.kind === 'switch' ? lk.plan.classicOk : g.classic + g.v5 > 0;
     if (!any) continue;

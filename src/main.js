@@ -509,6 +509,51 @@ ipcMain.handle('build:restore', () => {
   return client.restoreAll();
 });
 
+/**
+ * «Сброс всех настроек» (кнопка в шапке, 17.11.2026): файлы игры — из резерва
+ * (как раньше «Вернуть как было»), настройки программы — по умолчанию.
+ * Раньше кнопка возвращала только файлы, а следующая сборка ставила всё
+ * обратно по старым настройкам — пользователь думал, что сброс не работает.
+ *
+ * Остаётся: язык, путь к импорту официального Classic (сам импорт), пройденный
+ * мастер, папка клиента, сохранённые пресеты (сам включённый пресет снимается).
+ * Старые настройки — копией в userData/profile-backups, их можно вернуть
+ * «Из файла» или руками.
+ */
+ipcMain.handle('profile:resetAll', () => {
+  if (!client) throw new Error('клиент не выбран');
+  if (building) throw new Error('дождись конца сборки');
+  const restored = client.restoreAll();
+  // посторонние паки (свои перебивалки прошлых версий, чужие моды интерфейса) —
+  // в карантин, как «полный сброс» в разделе «Клиент»: клиент должен стать чистым
+  const extra = reset.run(client, quarantineDir());
+  restored.push(...extra.restored.filter((r) => !restored.includes(r)), ...extra.removed);
+  nameCache.clear();
+  skinCache = null;
+  elementCache = null;
+  client.cache.clear();
+  stopBuildWorker();
+  const old = readJson(profilePath(), null);
+  let backup = '';
+  if (old) {
+    const dir = path.join(userDir(), 'profile-backups');
+    fs.mkdirSync(dir, { recursive: true });
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    backup = path.join(dir, `profile-${stamp}.json`);
+    writeJson(backup, old);
+  }
+  const fresh = emptyProfile();
+  if (old) {
+    if (old.lang) fresh.lang = old.lang;
+    if (old.wizard) fresh.wizard = old.wizard;
+    if (old.classic && old.classic.root) fresh.classic.root = old.classic.root;
+    if (old.classic && old.classic.source) fresh.classic.source = old.classic.source;
+  }
+  writeJson(profilePath(), fresh);
+  setActivePreset(null);
+  return { restored, backup };
+});
+
 ipcMain.handle('build:status', () => (client ? client.status() : []));
 
 // ---- полный сброс --------------------------------------------------------

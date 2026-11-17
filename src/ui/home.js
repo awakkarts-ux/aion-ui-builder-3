@@ -60,42 +60,14 @@ async function homeTheme(id) {
       const cl = clState();
       cl.off = prev.off || {};
       cl.hud.off = prev.hudOff || {};
+      if (prev.rules) cl.rules = prev.rules;
       if (prev.look) state.profile.look = prev.look; else delete state.profile.look;
       delete state.profile.themePrev;
       if (lk) lk.planFor = '';
     }
   }
   let base = '';
-  if (id) {
-    try {
-      const cl = clState();
-      if (!cl.root && window.api.classic.guess) {
-        const guess = await window.api.classic.guess();
-        if (guess) cl.root = guess;
-      }
-      const info = cl.root ? await window.api.look.groups(cl.root) : null;
-      if (info && info.classicOk) {
-        const groups = Object.assign({}, state.profile.look && state.profile.look.groups);
-        for (const g of info.groups) groups[g.id] = 'classic';
-        // старые выключатели «Тонкой настройки» (classic.off, classic.hud.off)
-        // перебивают группы: без этого Classic почти не встаёт. Запоминаем их,
-        // «Выключить» вернёт как было.
-        if (!state.profile.themePrev) {
-          state.profile.themePrev = {
-            look: state.profile.look || null,
-            off: cl.off || {},
-            hudOff: (cl.hud && cl.hud.off) || {},
-          };
-        }
-        cl.off = {};
-        cl.hud.off = {};
-        state.profile.look = { groups };
-        if (!cl.hud.set) cl.hud.set = 's2';
-        if (lk) lk.planFor = ''; // «Вид интерфейса» перечитает при открытии
-        base = 'classic';
-      } else base = 'none';
-    } catch (e) { base = 'none'; }
-  }
+  if (id) base = (await homeClassicBase()) ? 'classic' : 'none';
   saveProfile();
   homeTheme.done = id ? { id, base } : null;
   if (typeof renderSummary === 'function') renderSummary();
@@ -109,6 +81,70 @@ async function homeTheme(id) {
   }
 }
 
+/**
+ * Основа «официальный Classic»: все группы микшера — Classic, окна HUD Classic
+ * включены. Снимает всё, что раньше выключало Classic по частям:
+ *   - старые выключатели «Тонкой настройки» (classic.off, classic.hud.off);
+ *   - выключенные источники деталей (classic.rules) — все три выключены, и
+ *     у Classic в микшере 0 деталей, кнопки «Classic» серые (17.11, профиль
+ *     пользователя: v3, same, v3odd = false).
+ * Прежнее запоминается в profile.themePrev — «Выключить» темы вернёт.
+ * @returns {Promise<boolean>} false — Classic не импортирован
+ */
+async function homeClassicBase() {
+  try {
+    const cl = clState();
+    if (!cl.root && window.api.classic.guess) {
+      const guess = await window.api.classic.guess();
+      if (guess) cl.root = guess;
+    }
+    const info = cl.root ? await window.api.look.groups(cl.root) : null;
+    if (!info || !info.classicOk) return false;
+    const groups = Object.assign({}, state.profile.look && state.profile.look.groups);
+    for (const g of info.groups) groups[g.id] = 'classic';
+    if (!state.profile.themePrev) {
+      state.profile.themePrev = {
+        look: state.profile.look || null,
+        off: cl.off || {},
+        hudOff: (cl.hud && cl.hud.off) || {},
+        rules: cl.rules || {},
+      };
+    }
+    cl.off = {};
+    cl.hud.off = {};
+    cl.rules = {}; // умолчания: v3 и same включены, v3odd выключен
+    cl.hud.enabled = true;
+    state.profile.look = { groups };
+    if (!cl.hud.set) cl.hud.set = 's2';
+    if (typeof lk !== 'undefined' && lk) lk.planFor = ''; // «Вид интерфейса» перечитает
+    return true;
+  } catch (e) { return false; }
+}
+
+/** Все группы микшера на Classic — карточка Classic «выбрана». */
+function homeClassicOn() {
+  const g = state.profile && state.profile.look && state.profile.look.groups;
+  if (!g) return false;
+  const v = Object.values(g);
+  return v.length > 0 && v.every((x) => x === 'classic');
+}
+
+/** «Применить» на карточке Classic — по-настоящему, а не переход в раздел. */
+async function homeClassic(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Применяю…'; }
+  await new Promise((r) => setTimeout(r, 0));
+  const ok = await homeClassicBase();
+  saveProfile();
+  if (typeof renderSummary === 'function') renderSummary();
+  if (typeof renderBadges === 'function') renderBadges();
+  renderHome();
+  if (typeof toast === 'function') {
+    toast(ok ? 'Classic применён. Нажмите «Собрать и установить», чтобы увидеть в игре'
+      : 'Официальный Classic не импортирован — импортируйте его в разделе «Официальный Classic»');
+  }
+  if (!ok) homeGo('classic');
+}
+
 function homeGo(view) {
   const target = view === 'style' ? 'look' : view;
   const b = document.querySelector(`.nav[data-view="${target}"]`);
@@ -120,7 +156,7 @@ function renderHome() {
   const theme = (state.profile && state.profile.theme) || '';
   const looks = HOME_LOOKS.map((l) => {
     const card = HOME_LOOK_TEXT[l.id];
-    const on = l.theme ? theme === l.id : cur === l.id;
+    const on = l.theme ? theme === l.id : (l.id === 'classic' ? homeClassicOn() : cur === l.id);
     return `<div class="hb flow ${l.cls}${on ? ' is-on' : ''}" role="button" tabindex="0" data-look="${l.id}" aria-pressed="${on}">` +
       '<span class="hb__glow"></span><span class="hb__spot"></span><span class="hb__grain"></span>' +
       `<div class="hb__top"><div><b>${esc(card[1])}</b><small>${esc(HOME_SUB[l.id])}</small></div>` +
@@ -176,6 +212,8 @@ function renderHome() {
         else if (state.profile.theme !== look) guard(() => homeTheme(look));
         return;
       }
+      const ap = e.target.closest('[data-apply]');
+      if (look === 'classic' && ap) { guard(() => homeClassic(ap)); return; }
       homeGo('look');
     };
     el.onclick = act;
@@ -249,7 +287,7 @@ const GUIDE_ITEMS = [
 
 const GUIDE_RULES = [
   ['Игра должна быть закрыта', 'Пока клиент запущен, он держит файлы, и сборка не начнётся.'],
-  ['Оригиналы сохраняются', 'Перед первой правкой программа копирует штатные файлы в резерв. «Вернуть как было» вверху возвращает их.'],
+  ['Оригиналы сохраняются', 'Перед первой правкой программа копирует штатные файлы в резерв. «Сброс всех настроек» вверху возвращает их и ставит настройки программы по умолчанию.'],
   ['Пресеты', 'Пресет — сохранённый набор всех настроек. Переключается и сохраняется в верхней строке.'],
   ['После обновления сервера', 'Если патч заменил файлы игры, программа сама обновит резерв. Просто соберите заново.'],
 ];

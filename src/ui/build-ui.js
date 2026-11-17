@@ -126,10 +126,23 @@ $('#bld').onkeydown = (e) => { if (e.key === 'Escape') bldClose(); };
 
 $('#do-restore').onclick = () =>
   guard(async () => {
-    const done = await window.api.build.restore();
-    $('#apply-log').textContent = done.length
-      ? 'возвращено:\n' + done.join('\n')
-      : 'нечего возвращать';
-    toast(done.length ? 'вернул ' + done.length + ' файл(ов)' : 'нечего возвращать');
-    await refreshStatus();
+    const ok = confirm('Сбросить все настройки?\n\n' +
+      '— файлы игры вернутся к штатным (из резерва);\n' +
+      '— все настройки программы станут по умолчанию: тема, Classic, 5.x, шрифт, иконки, цифры, бафы, портрет, карты.\n\n' +
+      'Останутся: папка клиента, язык, импорт официального Classic и сохранённые пресеты. ' +
+      'Старые настройки сохранятся копией в файл.');
+    if (!ok) return;
+    const r = await window.api.profile.resetAll();
+    try { localStorage.setItem('resetAll.done', JSON.stringify({ n: r.restored.length, backup: r.backup })); } catch (e) { /* без localStorage — просто без сообщения */ }
+    // все разделы читают профиль при запуске — проще и надёжнее перезагрузить окно
+    location.reload();
   });
+
+// сообщение после перезагрузки окна сбросом
+try {
+  const d = JSON.parse(localStorage.getItem('resetAll.done') || 'null');
+  if (d) {
+    localStorage.removeItem('resetAll.done');
+    setTimeout(() => toast(`Настройки сброшены, файлов игры возвращено: ${d.n}. Старые настройки: ${d.backup || 'не было'}`), 600);
+  }
+} catch (e) { /* ничего */ }
