@@ -53,7 +53,18 @@ async function homeTheme(id) {
   }
   await new Promise((r) => setTimeout(r, 0)); // дать окну нарисовать «Применяю…»
   if (id) state.profile.theme = id;
-  else delete state.profile.theme;
+  else {
+    delete state.profile.theme;
+    const prev = state.profile.themePrev;
+    if (prev) {
+      const cl = clState();
+      cl.off = prev.off || {};
+      cl.hud.off = prev.hudOff || {};
+      if (prev.look) state.profile.look = prev.look; else delete state.profile.look;
+      delete state.profile.themePrev;
+      if (lk) lk.planFor = '';
+    }
+  }
   let base = '';
   if (id) {
     try {
@@ -66,6 +77,18 @@ async function homeTheme(id) {
       if (info && info.classicOk) {
         const groups = Object.assign({}, state.profile.look && state.profile.look.groups);
         for (const g of info.groups) groups[g.id] = 'classic';
+        // старые выключатели «Тонкой настройки» (classic.off, classic.hud.off)
+        // перебивают группы: без этого Classic почти не встаёт. Запоминаем их,
+        // «Выключить» вернёт как было.
+        if (!state.profile.themePrev) {
+          state.profile.themePrev = {
+            look: state.profile.look || null,
+            off: cl.off || {},
+            hudOff: (cl.hud && cl.hud.off) || {},
+          };
+        }
+        cl.off = {};
+        cl.hud.off = {};
         state.profile.look = { groups };
         if (!cl.hud.set) cl.hud.set = 's2';
         if (lk) lk.planFor = ''; // «Вид интерфейса» перечитает при открытии
