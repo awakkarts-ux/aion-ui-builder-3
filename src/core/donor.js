@@ -468,6 +468,16 @@ const ICON_PAIRS = {
  * Рамки окон без пары у официального -> рамка его новых окон. Подсказки
  * (`v4_tooltip*`) не трогаем: ими код рисует подсказки к предметам.
  */
+/**
+ * Наша библиотека -> библиотека, которой официальный рисует то же самое, когда
+ * нашу (одноимённую) он не грузит. Лобби (вход, выбор и создание персонажа):
+ * у официального v4_lobby.xml лежит, но в списке загрузки его нет — экраны
+ * рисует v3_lobby.xml с теми же именами деталей (171 общая). Сравнение с
+ * v4_lobby давало случайный результат: плашки персонажей менялись, кнопки
+ * «Играть / Создать / Удалить» оставались старыми (17.11, скрин пользователя).
+ */
+const LIB_LOADED_AS = { 'v4_lobby.xml': 'v3_lobby.xml' };
+
 const FRAME_FALLBACK = {
   v4_dialog4: 'v3_dialog02', // окно карты
   v4_msgbox3: 'v3_dialog02', // системное меню, выбор цвета (у официального — v3_dialog02)
@@ -653,7 +663,11 @@ function plan(client, donor, lang) {
   const noAtlas = new Set();
 
   for (const lib of libs) {
-    const dk = theirKey.get(lib.toLowerCase());
+    let dk = theirKey.get(lib.toLowerCase());
+    // одноимённую официальный не грузит, а то же рисует другой — берём её
+    const alt = LIB_LOADED_AS[lib.toLowerCase()];
+    if (alt && theirLoaded && !theirLoaded.includes(libBase(lib)) &&
+        theirLoaded.includes(libBase(alt)) && theirKey.has(alt)) dk = theirKey.get(alt);
     const same = new Map();
     if (dk) {
       for (const { node } of skinNodes(bxml.parse(theirs.get(dk)).root)) {

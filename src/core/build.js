@@ -105,6 +105,28 @@ function apply(client, profile, log, opts) {
     }
     for (const [s, loc] of hudPlan.ships) shipLocs.set(s, loc);
     if (hudPlan.missing.length) say('окна HUD: у официального не нашлось ' + hudPlan.missing.join(', '));
+    // «Крылья» по бокам нижней группы (widewing_left/right) — украшение своего
+    // HUD, отдельными окнами; не перенесённые, они торчали «веточками» у
+    // портрета и у карты (17.11, скрин). В новом наборе официального (s3) эти
+    // окна пустые — делаем так же: окно остаётся (его ждёт код), картинки нет.
+    if (hudPlan.dialogs.some((d) => d.on && !d.error)) {
+      const key = (cl.hud && cl.hud.set) === 's2' ? 'hud_s2' : 'hud_s1';
+      let wings = 0;
+      for (const side of ['left', 'right']) {
+        const entry = `widewing_${side}_dialog.xml`;
+        const id = key + '/' + entry;
+        if (overrides.has(id) || !client.has(key)) continue;
+        const data = client.original(key).get(entry);
+        if (!data) continue;
+        const { root, strings } = bxml.parse(data);
+        const dlg = [...root.walk()].find((n) => n.name === 'Dialog');
+        if (!dlg) continue;
+        dlg.kids = dlg.kids.filter((k) => k.name !== 'Widget');
+        overrides.set(id, bxml.serialize(root, strings));
+        wings++;
+      }
+      if (wings) say('окна HUD: украшения по бокам нижней панели («крылья») убраны, как у официального');
+    }
   }
 
   // обычные окна: зазор строк в списках и полоса под вкладками, как у
@@ -236,8 +258,16 @@ function apply(client, profile, log, opts) {
   // тема Night City: своя раскладка окна цели (ncwin.js) поверх своего или официального окна
   const wantNc = profile.theme === 'nightcity';
   if (wantNc) {
-    const id = 'game/target_dialog.xml';
-    layout[id] = Object.assign({}, layout[id], { nc: 'target' });
+    // окна темы (ncwin.WINDOWS); рассчитанные на окна официального Classic —
+    // только если они перенесены (иначе раскладка легла бы на чужие размеры)
+    let ncN = 0;
+    for (const [id, w] of Object.entries(ncwin.WINDOWS)) {
+      if (w.classic && !overrides.has(id)) continue;
+      layout[id] = Object.assign({}, layout[id], { nc: true });
+      ncN++;
+    }
+    say(`тема Night City: окон в своей раскладке — ${ncN}` +
+      (ncN <= 1 ? ' (окна игрока и панели умений — поверх окон HUD Classic: включите их в «Виде интерфейса»)' : ''));
   }
 
   const splits = Array.isArray(profile.splits) ? profile.splits.filter((s) => s && s.win && s.el) : [];
@@ -273,7 +303,7 @@ function apply(client, profile, log, opts) {
     if (Number.isInteger(edit.calib) && edit.calib >= 0) { calib.apply(root, edit.calib); touched = true; }
     if (edit.arrange) { arrange.apply(root, edit.arrange); touched = true; }
     if (edit.split && elementsLib.splitDialog(root, edit.split)) touched = true;
-    if (edit.nc === 'target' && ncwin.applyTarget(root)) touched = true;
+    if (edit.nc && ncwin.apply(id, root)) touched = true;
     // раскладка «Стиля Aion» и сетка бафов правят окно после — повторяем,
     // и полоса захвата — по окончательному размеру
     if (edit.free) {
@@ -396,6 +426,8 @@ function apply(client, profile, log, opts) {
 
     const libs = new Set(Object.keys(skinEdits).map((k) => k.split('|')[0]));
     if (wantV5 || hudLib || wantRadar || wantCalib || wantGrip || wantNc) libs.add(v5.V4_LIB);
+    // тема Night City перекрашивает значки классов и в version5.xml
+    if (wantNc) { const v5lib = [...files.keys()].find((k) => /^version5\.xml$/i.test(k)); if (v5lib) libs.add(v5lib); }
     if (wantRadar) {
       // маска карты живёт в free_version.xml; имя файла в паке — как есть
       const fv = [...files.keys()].find((k) => /^free_version\.xml$/i.test(k));
@@ -457,11 +489,16 @@ function apply(client, profile, log, opts) {
         n += add.length;
       }
       if (wantNc && lib === v5.V4_LIB) {
-        const add = ncwin.library();
+        const add = ncwin.library(root);
         root.kids.push(...add);
         n += add.length;
-        say(`тема Night City: окно цели в своей раскладке, скинов и пресетов ${add.length}` +
+        say(`тема Night City: скинов и пресетов ${add.length}` +
           (ncwin.GAUGE_TEST ? ' — полоса HP цели: тестовая линейка 0–9' : ''));
+      }
+      if (wantNc) {
+        const r = ncwin.restyle(root);
+        if (r) say(`тема Night City: ${lib} — значки классов и кольцо карты, скинов ${r}`);
+        n += r;
       }
       if (wantGrip && lib === v5.V4_LIB) {
         const add = hud.gripLibrary();
