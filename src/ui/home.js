@@ -43,40 +43,46 @@ const HOME_SUB = { classic: 'Основа вида', v5: 'Основа вида'
  * не трогает.
  */
 async function homeTheme(id) {
-  if (id) state.profile.theme = id;
-  else delete state.profile.theme;
-  saveProfile(); // тема включена сразу, даже если сравнение с Classic прервут
-  let base = '';
-  // сравнение с официальным Classic на настоящем клиенте идёт несколько
-  // секунд — без отметки кажется, что кнопка не сработала
+  // окно не должно замирать: тяжёлое сравнение с Classic (look:plan) здесь
+  // не нужно — сборка сама берёт у Classic только то, что у него есть
   const btn = id && document.querySelector(`#home-grid [data-look="${id}"] [data-theme-on]`);
   if (btn) {
     btn.disabled = true;
-    btn.textContent = 'Применяю… сравниваю с Classic';
+    btn.textContent = 'Применяю…';
     btn.closest('.hb').classList.add('is-busy');
   }
-  if (id && typeof loadLook === 'function') {
+  await new Promise((r) => setTimeout(r, 0)); // дать окну нарисовать «Применяю…»
+  if (id) state.profile.theme = id;
+  else delete state.profile.theme;
+  let base = '';
+  if (id) {
     try {
-      await loadLook(true);
-      if (lk.plan && lk.plan.classicOk) {
-        const ch = {};
-        for (const g of lk.plan.groups) ch[g.id] = lkAvail(g, 'classic') ? 'classic' : 'own';
-        const hud = clState().hud;
-        if (!hud.set) hud.set = 's2';
-        lkSet(ch);
+      const cl = clState();
+      if (!cl.root && window.api.classic.guess) {
+        const guess = await window.api.classic.guess();
+        if (guess) cl.root = guess;
+      }
+      const info = cl.root ? await window.api.look.groups(cl.root) : null;
+      if (info && info.classicOk) {
+        const groups = Object.assign({}, state.profile.look && state.profile.look.groups);
+        for (const g of info.groups) groups[g.id] = 'classic';
+        state.profile.look = { groups };
+        if (!cl.hud.set) cl.hud.set = 's2';
+        if (lk) lk.planFor = ''; // «Вид интерфейса» перечитает при открытии
         base = 'classic';
       } else base = 'none';
     } catch (e) { base = 'none'; }
   }
   saveProfile();
+  homeTheme.done = id ? { id, base } : null;
   if (typeof renderSummary === 'function') renderSummary();
   if (typeof renderBadges === 'function') renderBadges();
   if (typeof renderFont === 'function') renderFont();
   renderHome();
   if (typeof toast === 'function') {
     toast(!id ? 'Тестовый вариант выключен'
-      : base === 'classic' ? 'Тестовый вариант включён на основе официального Classic — соберите, чтобы увидеть в игре'
-        : 'Тестовый вариант включён. Для окон HUD как у официального Classic импортируйте его в разделе «Официальный Classic»');
+      : base === 'classic' ? 'Применено. Нажмите «Собрать и установить», чтобы увидеть в игре'
+        : 'Применено. Для окон HUD как у официального Classic импортируйте его в разделе «Официальный Classic»');
   }
 }
 
@@ -99,7 +105,9 @@ function renderHome() {
       `<div class="hb__mid"><span class="hb__dots"></span><span class="hb__big">${esc(l.big)}</span></div>` +
       `<div class="hb__foot"><p>${esc(card[2])}</p><div class="hb__acts">` +
       (l.theme
-        ? (on ? '<span class="hb__on">Включён</span><button class="pill" data-theme-off>Выключить</button>' +
+        ? (on ? (homeTheme.done && homeTheme.done.id === l.id
+              ? '<span class="hb__ok">Применено · теперь «Собрать и установить»</span>' : '') +
+            '<span class="hb__on">Включён</span><button class="pill" data-theme-off>Выключить</button>' +
             `<span class="hb__vars">${(HOME_VARIANTS[l.id] || []).map(([v, t]) =>
               `<button class="hb__var${(state.profile.themeVariant || 'mix') === v ? ' is-on' : ''}" data-variant="${v}">${esc(t)}</button>`).join('')}</span>`
           : '<button class="pill" data-theme-on>Применить</button>')

@@ -64,6 +64,7 @@ contextBridge.exposeInMainWorld('api', {
   },
   look: {
     plan: (root, rules) => call('look:plan', root, rules),
+    groups: (root) => call('look:groups', root),
   },
   itemicons: {
     catalogue: () => call('itemicons:catalogue'),

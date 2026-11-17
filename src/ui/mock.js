@@ -375,6 +375,7 @@ if (!window.api) {
     },
     shots: { list: async () => [], read: async () => null },
     look: {
+      groups: async (root) => ({ classicOk: !!root, groups: ['frames', 'buttons', 'hud', 'gauges', 'hudwin', 'winfix', 'maptiles'].map((id) => ({ id, kind: /^(hudwin|winfix|maptiles)$/.test(id) ? 'switch' : '' })) }),
       plan: async (root) => {
         const s = (n) => ({ name: n, own: { texture: 't/own', rect: '0,0,40,20' },
           classic: { texture: 't/cl', rect: '0,0,40,20' }, v5: { texture: 't/v5', rect: '0,0,40,20' } });

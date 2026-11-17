@@ -911,6 +911,19 @@ ipcMain.handle('classic:plan', (_e, root, rules) => {
  * Микшер вида: что каждая группа получит от официального Classic и от
  * Aion 5.x, с образцами «свой / Classic / 5.x» для карточек.
  */
+/**
+ * Быстрый список групп микшера и есть ли донор Classic — без сравнения
+ * скинов (оно идёт секунды и на это время замораживает окно). Нужен
+ * «Применить» на Главной.
+ */
+ipcMain.handle('look:groups', (_e, root) => {
+  let classicOk = false;
+  if (root) {
+    try { classicOk = getDonor(root).check().ok; } catch (e) { classicOk = false; }
+  }
+  return { classicOk, groups: looklib.GROUPS.map((g) => ({ id: g.id, kind: g.kind || '' })) };
+});
+
 ipcMain.handle('look:plan', (_e, root, rules) => {
   if (!client) throw new Error('клиент не выбран');
   const lang = activeLang();
