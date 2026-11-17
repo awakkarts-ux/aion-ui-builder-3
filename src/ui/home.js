@@ -31,19 +31,43 @@ const HOME_LOOK_TEXT = {
   nightcity: ['Тестовый вариант', 'Night City · в стиле Cyberpunk 2077',
     'Новые детали: плоские тёмные плашки со срезанными углами, тонкие красные линии, бирюза и жёлтый, узкий шрифт.'],
 };
+/** Варианты палитры темы — как в core/theme.js (variants). */
+const HOME_VARIANTS = { nightcity: [['mix', 'Смешанный'], ['red', 'Красный'], ['cyan', 'Бирюза']] };
+
 const HOME_SUB = { classic: 'Основа вида', v5: 'Основа вида', nightcity: 'Тестовый вариант · тема' };
 
-/** Включает или выключает тему. Остальные настройки не трогает. */
-function homeTheme(id) {
+/**
+ * Включает или выключает тему. Включение заодно ставит основой официальный
+ * Classic (если он импортирован): у него плоские окна HUD — портрет слева,
+ * полосы справа, — тема перерисовывает их в своём стиле. Выключение основу
+ * не трогает.
+ */
+async function homeTheme(id) {
   if (id) state.profile.theme = id;
   else delete state.profile.theme;
+  let base = '';
+  if (id && typeof loadLook === 'function') {
+    try {
+      await loadLook(true);
+      if (lk.plan && lk.plan.classicOk) {
+        const ch = {};
+        for (const g of lk.plan.groups) ch[g.id] = lkAvail(g, 'classic') ? 'classic' : 'own';
+        const hud = clState().hud;
+        if (!hud.set) hud.set = 's2';
+        lkSet(ch);
+        base = 'classic';
+      } else base = 'none';
+    } catch (e) { base = 'none'; }
+  }
   saveProfile();
   if (typeof renderSummary === 'function') renderSummary();
   if (typeof renderBadges === 'function') renderBadges();
   if (typeof renderFont === 'function') renderFont();
   renderHome();
   if (typeof toast === 'function') {
-    toast(id ? 'Тестовый вариант включён — соберите, чтобы увидеть в игре' : 'Тестовый вариант выключен');
+    toast(!id ? 'Тестовый вариант выключен'
+      : base === 'classic' ? 'Тестовый вариант включён на основе официального Classic — соберите, чтобы увидеть в игре'
+        : 'Тестовый вариант включён. Для окон HUD как у официального Classic импортируйте его в разделе «Официальный Classic»');
   }
 }
 
@@ -66,7 +90,9 @@ function renderHome() {
       `<div class="hb__mid"><span class="hb__dots"></span><span class="hb__big">${esc(l.big)}</span></div>` +
       `<div class="hb__foot"><p>${esc(card[2])}</p><div class="hb__acts">` +
       (l.theme
-        ? (on ? '<span class="hb__on">Включён</span><button class="pill" data-theme-off>Выключить</button>'
+        ? (on ? '<span class="hb__on">Включён</span><button class="pill" data-theme-off>Выключить</button>' +
+            `<span class="hb__vars">${(HOME_VARIANTS[l.id] || []).map(([v, t]) =>
+              `<button class="hb__var${(state.profile.themeVariant || 'mix') === v ? ' is-on' : ''}" data-variant="${v}">${esc(t)}</button>`).join('')}</span>`
           : '<button class="pill" data-theme-on>Применить</button>')
         : on
           ? '<span class="hb__on">Выбран</span>' +
@@ -98,8 +124,16 @@ function renderHome() {
       if (!look) return;
       const def = HOME_LOOKS.find((x) => x.id === look);
       if (def && def.theme) {
-        if (e.target.closest('[data-theme-off]')) homeTheme('');
-        else if (state.profile.theme !== look) homeTheme(look);
+        const vb = e.target.closest('[data-variant]');
+        if (vb) {
+          state.profile.themeVariant = vb.dataset.variant;
+          saveProfile();
+          if (typeof renderSummary === 'function') renderSummary();
+          renderHome();
+          return;
+        }
+        if (e.target.closest('[data-theme-off]')) guard(() => homeTheme(''));
+        else if (state.profile.theme !== look) guard(() => homeTheme(look));
         return;
       }
       homeGo('look');
@@ -115,6 +149,8 @@ function renderHome() {
   });
   $$('#home-note [data-go]').forEach((b) => { b.onclick = () => homeGo(b.dataset.go); });
   homeRail();
+  // анимация появления — только при первом показе, не при каждой перерисовке
+  setTimeout(() => $('#home-grid').classList.add('is-settled'), 900);
 }
 
 /** Лента листается стрелками, колесом и тачпадом; стрелки гаснут у краёв. */

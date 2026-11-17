@@ -340,6 +340,7 @@ if (!window.api) {
       run: async () => ({ restored: ['data/ui/game/game.pak'], removed: ['textures/ui/zz_aion2.pak'] }),
       undo: async () => [],
     },
+    design: { dump: async () => ({ windows: 54, skins: 1068, atlases: 18, classic: { windows: 40 } }) },
     font: {
       pick: async () => 'C:\\demo\\AccidentalPresidency-Ru.ttf',
       builtin: async () => [

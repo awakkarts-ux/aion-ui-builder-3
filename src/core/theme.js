@@ -53,6 +53,20 @@ const THEMES = {
       [335, 361, 4],
     ],
     keep: 70, // разброс каналов (max - min), выше которого пиксель «цветной»
+    // варианты палитры деталей: profile.themeVariant, по умолчанию — variant
+    variant: 'mix',
+    variants: {
+      red: { title: 'Красный', redraw: {} },
+      cyan: {
+        title: 'Бирюза',
+        redraw: { line: [82, 242, 238], lineDim: [24, 98, 102], edge: [16, 46, 50], fillHot: [10, 46, 50], hi: [214, 255, 252] },
+      },
+      mix: {
+        title: 'Смешанный',
+        // рамки красные, светлые состояния бирюзовые, грани внутри HUD бирюзовые
+        redraw: { lineHot: [82, 242, 238], inner: [60, 190, 186], fillHot: [10, 42, 46] },
+      },
+    },
     font: 'fira-cond', // готовый шрифт темы (core/fonts.js), если свой не включён
     // палитра перерисовки деталей (core/redraw.js); нет поля — тема только перекрашивает
     redraw: {
@@ -62,6 +76,7 @@ const THEMES = {
       lineDim: [118, 34, 32], // линия тёмных состояний и мелких граней
       edge: [58, 22, 24], // слабые грани внутри сложных рамок
       hi: [255, 214, 205], // блики
+      neutral: [236, 230, 220], // лёгкий тёплый оттенок белого у цифр и надписей
     },
   },
 };
@@ -154,8 +169,19 @@ function recolorDds(raw, theme) {
 /** Тема профиля или null. `profile.theme` — id темы. */
 function resolve(profile) {
   const id = profile && profile.theme;
-  return (id && THEMES[id]) || null;
+  const base = (id && THEMES[id]) || null;
+  if (!base || !base.variants) return base;
+  const vid = base.variants[profile.themeVariant] ? profile.themeVariant : base.variant;
+  const key = base.id + ':' + vid;
+  if (!variantCache.has(key)) {
+    const v = base.variants[vid];
+    // id с вариантом — у кэша атласов и таблицы рампы свой ключ на каждый вариант
+    variantCache.set(key, Object.assign({}, base, { id: key, variantId: vid, _lut: null,
+      redraw: Object.assign({}, base.redraw, v.redraw) }));
+  }
+  return variantCache.get(key);
 }
+const variantCache = new Map();
 
 /**
  * Перекрашенные атласы для сборки: ключ описи uiatlas -> DDS.
@@ -185,7 +211,8 @@ function stage(client, lang, theme, skip) {
 
 /** Для окна: список тем без рамп. */
 function list() {
-  return Object.values(THEMES).map((t) => ({ id: t.id, title: t.title, hint: t.hint }));
+  return Object.values(THEMES).map((t) => ({ id: t.id, title: t.title, hint: t.hint, variant: t.variant,
+    variants: Object.entries(t.variants || {}).map(([id, v]) => ({ id, title: v.title })) }));
 }
 
 module.exports = { THEMES, ATLAS_RE, recolor, recolorDds, makeDds, resolve, stage, list };

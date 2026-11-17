@@ -29,6 +29,7 @@ const usermaps = require('./core/usermaps');
 const itemicons = require('./core/itemicons');
 const theme = require('./core/theme');
 const fonts = require('./core/fonts');
+const designdump = require('./core/designdump');
 const { relativePath, assertImage, assertRgbaBytes, safeFileName } = require('./core/safe');
 const { Client, PAKS, PACKS } = require('./core/client');
 
@@ -760,6 +761,29 @@ const importDir = () => path.join(userDir(), 'official-classic');
 ipcMain.handle('classic:guess', () => {
   if (donorlib.importInfo(importDir())) return importDir();
   return DEFAULT_DONORS.find((p) => fs.existsSync(p) && new donorlib.Donor(p).check().ok) || '';
+});
+
+// ---- выгрузка для дизайна: окна HUD, скины, атласы в один zip -------------
+
+ipcMain.handle('design:dump', async () => {
+  if (!client) throw new Error('сначала выберите папку игры');
+  if (building) throw new Error('дождитесь конца сборки');
+  const day = new Date().toISOString().slice(0, 10);
+  const r = await dialog.showSaveDialog(win, {
+    title: 'Куда сохранить выгрузку для дизайна',
+    defaultPath: path.join(app.getPath('desktop'), `aion-design-${day}.zip`),
+    filters: [{ name: 'Архив', extensions: ['zip'] }],
+  });
+  if (r.canceled || !r.filePath) return null;
+  const prof = readJson(profilePath(), {});
+  const root = prof.classic && prof.classic.root;
+  let donor = null;
+  if (root && fs.existsSync(root)) {
+    try { const d = new donorlib.Donor(root); if (d.check().ok) donor = d; } catch (e) { donor = null; }
+  }
+  const res = designdump.run(client, { lang: prof.lang || 'rus', donor, outFile: r.filePath });
+  shell.showItemInFolder(r.filePath);
+  return res;
 });
 
 /** Что лежит по папке донора: импорт (с паспортом) или клиент. */

@@ -147,6 +147,92 @@ class Client {
     return fs.existsSync(this.backupPath(rel));
   }
 
+  /*
+   * Свежесть резерва (17.11.2026).
+   *
+   * Резерв снимается один раз, а сервер потом выпускает патчи: в паке игры
+   * появляются новые строки (сезон «Пути даэва», ивенты). Если собирать из
+   * старого резерва, новые строки затираются — в игре пропадают подписи и
+   * имена мобов становятся «?». Поэтому после каждой своей записи запоминаем
+   * размер и время файла, а перед сборкой сверяем: не совпало — файл
+   * поменял кто-то другой (патч, проверка файлов в лаунчере), и это новый
+   * оригинал. Для резервов из старых версий отметок нет: там признак патча —
+   * в паке игры есть записи, которых нет в резерве.
+   */
+  stampsPath() {
+    return this.backupDir.replace(/[\\/]+$/, '') + '-stamps.json';
+  }
+
+  readStamps() {
+    try { return JSON.parse(fs.readFileSync(this.stampsPath(), 'utf8')) || {}; } catch (e) { return {}; }
+  }
+
+  writeStamps(stamps) {
+    try {
+      fs.mkdirSync(path.dirname(this.stampsPath()), { recursive: true });
+      fs.writeFileSync(this.stampsPath(), JSON.stringify(stamps, null, 1));
+    } catch (e) { /* отметки — подсказка, без них сборка всё равно верна */ }
+  }
+
+  /** Запоминает, каким мы оставили файл после записи. */
+  markWritten(rel) {
+    const abs = this.abs(rel);
+    if (!fs.existsSync(abs)) return;
+    const st = fs.statSync(abs);
+    const stamps = this.readStamps();
+    stamps[rel] = { size: st.size, mtimeMs: st.mtimeMs };
+    this.writeStamps(stamps);
+  }
+
+  /** Отметка больше не нужна: файл снова равен резерву. */
+  forgetWritten(rel) {
+    const stamps = this.readStamps();
+    if (!(rel in stamps)) return;
+    delete stamps[rel];
+    this.writeStamps(stamps);
+  }
+
+  /**
+   * Обновляет резервы, чьи паки после нашей записи поменял патч.
+   * @returns {Array<{rel: string, why: string}>}
+   */
+  refreshStale() {
+    const stamps = this.readStamps();
+    const out = [];
+    for (const { file, rel } of this.backups()) {
+      const live = this.abs(rel);
+      if (!fs.existsSync(live)) continue;
+      const st = fs.statSync(live);
+      const stamp = stamps[rel];
+      let why = '';
+      if (stamp) {
+        if (st.size !== stamp.size || Math.abs(st.mtimeMs - stamp.mtimeMs) > 2000) why = 'файл игры обновился после прошлой сборки';
+      } else if (st.size !== fs.statSync(file).size) {
+        try {
+          const have = new Map(pak.readDirectory(fs.readFileSync(file)).entries.map((e) => [e.name, e.crc]));
+          const now = pak.readDirectory(fs.readFileSync(live)).entries;
+          const added = now.filter((e) => !have.has(e.name)).length;
+          // программа пишет только окна (UI/…) и картинки (.dds); другая запись
+          // поменялась — значит, её поменял патч (строки, задания, ивенты)
+          const changed = now.filter((e) => have.has(e.name) && have.get(e.name) !== e.crc &&
+            !/^ui\//i.test(e.name) && !/\.dds$/i.test(e.name)).length;
+          if (added) why = `в паке игры новых файлов ${added} — вышел патч`;
+          else if (changed) why = `в паке игры обновлено файлов ${changed} — вышел патч`;
+        } catch (e) { /* не разобрали — не трогаем */ }
+      }
+      if (!why) continue;
+      fs.copyFileSync(live, file);
+      delete stamps[rel];
+      out.push({ rel, why });
+    }
+    if (out.length) {
+      this.writeStamps(stamps);
+      this.cache.clear();
+      this._packIndex = null;
+    }
+    return out;
+  }
+
   /** Есть ли такой пак в клиенте: наборы s1/s2 встречаются не во всех сборках. */
   has(key) {
     const rel = PAKS[key];
@@ -176,7 +262,9 @@ class Client {
   writePak(key, changes) {
     const rel = PAKS[key];
     this.ensureBackup(rel);
-    return pak.patchPak(this.backupPath(rel), this.abs(rel), changes, this.dll);
+    const n = pak.patchPak(this.backupPath(rel), this.abs(rel), changes, this.dll);
+    this.markWritten(rel);
+    return n;
   }
 
   /** Языки, в чьих паках есть такая запись: какой из них читает клиент — неизвестно. */
@@ -222,7 +310,9 @@ class Client {
     const rel = this.l10nRel(lang);
     if (!fs.existsSync(this.abs(rel))) return 0;
     this.ensureBackup(rel);
-    return pak.patchPak(this.backupPath(rel), this.abs(rel), changes, this.dll);
+    const n = pak.patchPak(this.backupPath(rel), this.abs(rel), changes, this.dll);
+    this.markWritten(rel);
+    return n;
   }
 
   /**
@@ -393,6 +483,7 @@ class Client {
     for (const [rel, map] of byRel) {
       this.ensureBackup(rel);
       total += pak.patchPak(this.backupPath(rel), this.abs(rel), map, this.dll);
+      this.markWritten(rel);
       paks.push(rel);
     }
     return { count: total, paks };
@@ -498,6 +589,7 @@ class Client {
     const done = [];
     for (const { file, rel } of this.backups()) {
       fs.copyFileSync(file, this.abs(rel));
+      this.forgetWritten(rel);
       done.push(rel);
     }
     for (const lang of this.languages()) {

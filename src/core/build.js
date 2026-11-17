@@ -61,6 +61,8 @@ function apply(client, profile, log, opts) {
   // Проверяем всё разом до первой правки, чтобы не оставить полусобранный набор.
   if (!dry) {
     running.assertWritable(client.writeTargets(lang), client.root);
+    // патч сервера после прошлой сборки: новый файл игры — новый оригинал
+    for (const r of client.refreshStale()) say(`резерв обновлён: ${r.rel} — ${r.why}`);
     transaction = client.beginTransaction(lang);
   }
 
@@ -505,6 +507,16 @@ function apply(client, profile, log, opts) {
     const lost = [...shipLocs.keys()].filter((s) => !data.has(s));
     if (lost.length) throw new Error('не прочитал у донора атласы: ' + lost.join(', '));
     for (const [s, raw] of madeAtlases) data.set(s, raw);
+    // тема перерисовывает и детали официального Classic: тестовый вариант
+    // берёт его плоские окна HUD и рисует их в своём стиле
+    const thd = theme.resolve(profile);
+    if (thd) {
+      let n = 0;
+      for (const [s, raw] of data) {
+        try { data.set(s, theme.makeDds(raw, thd)); n++; } catch (e) { say(`тема ${thd.title}: атлас ${s} не разобран, оставлен как есть`); }
+      }
+      say(`тема ${thd.title}: перерисовано атласов официального Classic ${n}`);
+    }
     const entries = new Map([...data].map(([s, raw]) => [s + '.dds', raw]));
     pak.writePak(donorPak, entries, { encrypt: true, dllPath: client.dll });
     report.files += entries.size;
@@ -597,7 +609,7 @@ function apply(client, profile, log, opts) {
       const n = client.packStage('uiatlas', lang, r.atlases, byRel);
       say(`тема ${th.title}: ${th.redraw ? 'перерисовано' : 'перекрашено'} атласов ${n}` +
         (r.failed.length ? ` — не разобраны: ${r.failed.join(', ')}` : '') +
-        (mix.classic ? ' (детали, взятые у официального Classic, тема не красит)' : ''));
+        (mix.classic ? ' (детали официального Classic — ниже, вместе с его атласами)' : ''));
     }
   }
 

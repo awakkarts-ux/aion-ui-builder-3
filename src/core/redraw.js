@@ -86,7 +86,7 @@ function classify(c) {
   if (c.a < 170) return 'icon'; // полупрозрачные подсветки и тени: перерисовка закрыла бы текст под ними
   if (c.w * c.h < 120) return 'icon'; // крошки, точки
   if (c.w <= 18 && c.h <= 18 && c.l > 0.5) return 'icon'; // стрелки, плюсы, цифры
-  if (c.h <= 16 && c.w <= 120 && c.l > 0.55) return 'icon'; // строки цифр и надписей
+  if (c.h <= 18 && c.fill < 0.86) return 'icon'; // цифры, надписи, мелкие стрелки — у цифр тёмная обводка, яркость не годится
   if (c.fill > 0.86 && c.w >= 8 && c.h >= 8) return 'panel';
   return 'shape';
 }
@@ -107,7 +107,9 @@ function drawPanel(img, src, lab, c, pal) {
   // состояние по яркости исходника: тёмная — обычная, светлее — наведение/нажатие
   const k = clamp((c.l - 0.16) / 0.5, 0, 1);
   const fill = mix(pal.fill, pal.fillHot, k * 0.75);
-  const line = mix(pal.lineDim, pal.line, 0.35 + 0.65 * k);
+  // у палитры может быть свой цвет светлых состояний (наведение, нажатие, выбор)
+  const hot = pal.lineHot && k > 0.45;
+  const line = hot ? pal.lineHot : mix(pal.lineDim, pal.line, 0.35 + 0.65 * k);
   const alpha = clamp(c.a * 0.94, 0, 245);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
@@ -163,7 +165,7 @@ function drawShape(img, src, lab, c, pal) {
       const g = Math.sqrt(gx * gx + gy * gy) / 4;
       if (rim && a > 60) put(rgba, i, pal.line, a);
       else if (l > 0.62) put(rgba, i, mix(pal.line, pal.hi, clamp((l - 0.62) / 0.3, 0, 1)), a);
-      else if (g > 0.07 && l > 0.14) put(rgba, i, mix(pal.edge, pal.line, clamp((g - 0.07) / 0.3, 0, 1)), a);
+      else if (g > 0.07 && l > 0.14) put(rgba, i, mix(pal.edge, pal.inner || pal.line, clamp((g - 0.07) / 0.3, 0, 1)), a);
       else put(rgba, i, mix(pal.fill, pal.fillHot, clamp((l - 0.2) / 0.5, 0, 1) * 0.5), Math.min(a, 235));
     }
   }
@@ -189,11 +191,18 @@ function redraw(img, th) {
     else if (kind === 'shape') { drawShape(img, src, lab, c, pal); stat.shapes++; }
     else stat.icons++;
   }
-  // значкам — палитра темы, по их же пикселям
+  // значкам — палитра темы по оттенку, а серое и белое (цифры количества,
+  // стрелки, надписи) остаётся нейтральным: красные цифры на тёмном не читаются
   const one = Buffer.alloc(4);
   for (let p = 0; p < lab.length; p++) {
     if (!lab[p] || kinds.get(lab[p]) !== 'icon') continue;
     const i = p * 4;
+    const r = src[i], g = src[i + 1], b = src[i + 2];
+    if (Math.max(r, g, b) - Math.min(r, g, b) <= th.keep && r + g + b > 450) {
+      const y = 0.299 * r + 0.587 * g + 0.114 * b;
+      put(img.rgba, i, pal.neutral ? mix([y, y, y], pal.neutral, 0.12 * y / 255) : [y, y, y], src[i + 3]);
+      continue;
+    }
     src.copy(one, 0, i, i + 4);
     theme.recolor(one, th);
     one.copy(img.rgba, i);

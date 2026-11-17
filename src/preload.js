@@ -86,6 +86,9 @@ contextBridge.exposeInMainWorld('api', {
     pick: () => call('font:pick'),
     builtin: () => call('font:builtin'),
   },
+  design: {
+    dump: () => call('design:dump'),
+  },
   maps: {
     zones: () => call('maps:zones'),
     preview: (key, size) => call('maps:preview', { key, size }),

@@ -60,6 +60,7 @@ function run(client, quarantineDir) {
   ]);
   for (const r of p.restore) {
     fs.copyFileSync(client.backupPath(r.rel), client.abs(r.rel));
+    if (client.forgetWritten) client.forgetWritten(r.rel);
   }
   if (p.extra.length) fs.mkdirSync(quarantineDir, { recursive: true });
   for (const e of p.extra) {

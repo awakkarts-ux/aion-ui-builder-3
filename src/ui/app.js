@@ -1286,6 +1286,22 @@ $('#font-pick').onclick = () =>
     saveProfile();
   });
 
+$('#design-dump').onclick = () =>
+  guard(async () => {
+    const btn = $('#design-dump');
+    btn.disabled = true;
+    btn.textContent = 'Выгружаю…';
+    try {
+      const r = await window.api.design.dump();
+      if (!r) return;
+      toast(`Готово: окон ${r.windows}, деталей ${r.skins}, атласов ${r.atlases}` +
+        (r.classic ? `, Classic — окон ${r.classic.windows}` : '') + '. Пришлите архив в чат.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Выгрузить…';
+    }
+  });
+
 $('#font-on').onchange = (e) => {
   state.profile.font.enabled = e.target.checked;
   renderFont();

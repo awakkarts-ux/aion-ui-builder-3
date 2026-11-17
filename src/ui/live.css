@@ -182,6 +182,14 @@ html, body { background: var(--aura), var(--bg-base); }
 .hb--nc .hb__big { font-size: clamp(40px, 4.4vw, 68px); font-weight: 700; letter-spacing: .02em; text-transform: uppercase;
   color: #52f2ee; text-shadow: 0 0 24px rgba(82, 242, 238, .45), 3px 0 0 rgba(255, 84, 73, .7); }
 .hb--nc:hover .hb__big { letter-spacing: .04em; }
+.hb__acts:has(.hb__vars) { flex-wrap: wrap; }
+.hb__vars { display: flex; gap: 4px; flex-basis: 100%; }
+.hb__var {
+  padding: 5px 10px; border-radius: 999px; font: inherit; font-size: 12px; cursor: pointer;
+  background: rgba(255, 255, 255, .08); color: rgba(255, 255, 255, .75); border: 1px solid rgba(255, 255, 255, .12);
+}
+.hb__var:hover { background: rgba(255, 255, 255, .14); }
+.hb__var.is-on { background: #52f2ee; color: #062224; border-color: #52f2ee; }
 
 .hb {
   --g1: var(--g-steel-1); --g2: var(--g-steel-2); --g3: var(--g-steel-3);
@@ -380,6 +388,7 @@ html, body { background: var(--aura), var(--bg-base); }
 .home__grid > .hb { animation: view-in .55s cubic-bezier(.2, .9, .3, 1) both; }
 .home__grid > .hb:nth-child(2) { animation-delay: 70ms; }
 .home__grid > .hb:nth-child(3) { animation-delay: 140ms; }
+.home__grid.is-settled > .hb { animation: none; }
 .home__grid > .hb:nth-child(4) { animation-delay: 210ms; }
 
 @media (prefers-reduced-motion: reduce) {

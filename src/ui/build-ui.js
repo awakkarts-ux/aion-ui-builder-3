@@ -35,7 +35,9 @@ function renderSummary() {
       ? `конструктор (${p.hitnum.staged === hnSig(hnState()) ? 'подготовлено' : 'подготовлю при сборке'})`
       : count('hitnum')],
     ['Картинок интерфейса', count('uiatlas')],
-    ['Тестовый вариант', p.theme === 'nightcity' ? 'Night City — перерисованные атласы и шрифт' : 'нет'],
+    ['Тестовый вариант', p.theme === 'nightcity'
+      ? `Night City (${{ mix: 'смешанный', red: 'красный', cyan: 'бирюза' }[p.themeVariant || 'mix'] || 'смешанный'}) — перерисованные атласы и шрифт`
+      : 'нет'],
     ['Вид Aion 5.x', p.v5 && p.v5.enabled ? 'включён' : 'не меняем'],
     ['Вид официального Classic', classicSummary(p.classic)],
     ['Окна HUD официального Classic', p.classic && p.classic.hud && p.classic.hud.enabled && p.classic.root
