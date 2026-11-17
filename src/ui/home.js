@@ -2,7 +2,8 @@
 /*
  * «Главная» и «Инструкция» (22.10).
  *
- * Главная — три баннера: как пользоваться (→ инструкция) и две основы вида.
+ * Главная — лента баннеров, листается вбок: как пользоваться (→ инструкция),
+ * две основы вида и тестовые варианты (темы: core/theme.js, profile.theme).
  * Нажатие на баннер основы применяет её так же, как карточка во «Внешнем
  * виде» (stApply из style.js): меняется только вид, остальные разделы и
  * пресет не трогаются. Выбранную можно донастроить — переход во «Внешний вид»
@@ -22,11 +23,29 @@ const HOME_STEPS = [
 const HOME_LOOKS = [
   { id: 'classic', big: 'Classic', cls: 'hb--classic' },
   { id: 'v5', big: '5.x', cls: 'hb--v5' },
+  { id: 'nightcity', big: 'Night City', cls: 'hb--nc', theme: true },
 ];
 const HOME_LOOK_TEXT = {
   classic: ['Официальный Classic', 'Плоский вид 4Game', 'Основа интерфейса с официальными деталями Classic.'],
   v5: ['Aion 5.x', 'Вид поздних версий игры', 'Поздние детали интерфейса поверх текущего клиента.'],
+  nightcity: ['Тестовый вариант', 'Night City · в стиле Cyberpunk 2077',
+    'Новые детали: плоские тёмные плашки со срезанными углами, тонкие красные линии, бирюза и жёлтый, узкий шрифт.'],
 };
+const HOME_SUB = { classic: 'Основа вида', v5: 'Основа вида', nightcity: 'Тестовый вариант · тема' };
+
+/** Включает или выключает тему. Остальные настройки не трогает. */
+function homeTheme(id) {
+  if (id) state.profile.theme = id;
+  else delete state.profile.theme;
+  saveProfile();
+  if (typeof renderSummary === 'function') renderSummary();
+  if (typeof renderBadges === 'function') renderBadges();
+  if (typeof renderFont === 'function') renderFont();
+  renderHome();
+  if (typeof toast === 'function') {
+    toast(id ? 'Тестовый вариант включён — соберите, чтобы увидеть в игре' : 'Тестовый вариант выключен');
+  }
+}
 
 function homeGo(view) {
   const target = view === 'style' ? 'look' : view;
@@ -36,19 +55,23 @@ function homeGo(view) {
 
 function renderHome() {
   const cur = '';
+  const theme = (state.profile && state.profile.theme) || '';
   const looks = HOME_LOOKS.map((l) => {
     const card = HOME_LOOK_TEXT[l.id];
-    const on = cur === l.id;
+    const on = l.theme ? theme === l.id : cur === l.id;
     return `<div class="hb flow ${l.cls}${on ? ' is-on' : ''}" role="button" tabindex="0" data-look="${l.id}" aria-pressed="${on}">` +
       '<span class="hb__glow"></span><span class="hb__spot"></span><span class="hb__grain"></span>' +
-      `<div class="hb__top"><div><b>${esc(card[1])}</b><small>Основа вида</small></div>` +
+      `<div class="hb__top"><div><b>${esc(card[1])}</b><small>${esc(HOME_SUB[l.id])}</small></div>` +
       `<span class="hb__round" aria-hidden="true">${on ? '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 8.5 3 3 6-7"/></svg>' : HOME_ARROW}</span></div>` +
       `<div class="hb__mid"><span class="hb__dots"></span><span class="hb__big">${esc(l.big)}</span></div>` +
       `<div class="hb__foot"><p>${esc(card[2])}</p><div class="hb__acts">` +
-      (on
-        ? '<span class="hb__on">Выбран</span>' +
-          `<button class="pill" data-go="style">Настроить ${HOME_NEXT}</button>`
-        : '<button class="pill" data-apply>Применить</button>') +
+      (l.theme
+        ? (on ? '<span class="hb__on">Включён</span><button class="pill" data-theme-off>Выключить</button>'
+          : '<button class="pill" data-theme-on>Применить</button>')
+        : on
+          ? '<span class="hb__on">Выбран</span>' +
+            `<button class="pill" data-go="style">Настроить ${HOME_NEXT}</button>`
+          : '<button class="pill" data-apply>Применить</button>') +
       '</div></div></div>';
   }).join('');
 
@@ -73,6 +96,12 @@ function renderHome() {
       if (go) { homeGo(go.dataset.go); return; }
       const look = el.dataset.look;
       if (!look) return;
+      const def = HOME_LOOKS.find((x) => x.id === look);
+      if (def && def.theme) {
+        if (e.target.closest('[data-theme-off]')) homeTheme('');
+        else if (state.profile.theme !== look) homeTheme(look);
+        return;
+      }
       homeGo('look');
     };
     el.onclick = act;
@@ -85,6 +114,39 @@ function renderHome() {
     };
   });
   $$('#home-note [data-go]').forEach((b) => { b.onclick = () => homeGo(b.dataset.go); });
+  homeRail();
+}
+
+/** Лента листается стрелками, колесом и тачпадом; стрелки гаснут у краёв. */
+function homeRail() {
+  const grid = $('#home-grid');
+  const prev = $('#home-prev');
+  const next = $('#home-next');
+  if (!grid || !prev || !next) return;
+  const step = () => {
+    const card = grid.querySelector('.hb');
+    return card ? card.getBoundingClientRect().width + 16 : grid.clientWidth;
+  };
+  const sync = () => {
+    const max = grid.scrollWidth - grid.clientWidth - 2;
+    prev.disabled = grid.scrollLeft <= 2;
+    next.disabled = grid.scrollLeft >= max;
+    $('#home-pager').hidden = max <= 0;
+  };
+  prev.onclick = () => grid.scrollBy({ left: -step(), behavior: 'smooth' });
+  next.onclick = () => grid.scrollBy({ left: step(), behavior: 'smooth' });
+  grid.onscroll = sync;
+  grid.onwheel = (e) => {
+    if (Math.abs(e.deltaX) > Math.abs(e.deltaY) || grid.scrollWidth <= grid.clientWidth) return;
+    e.preventDefault();
+    grid.scrollBy({ left: e.deltaY > 0 ? step() : -step(), behavior: 'smooth' });
+  };
+  if (!homeRail.bound) {
+    homeRail.bound = true;
+    window.addEventListener('resize', () => homeRail.sync && homeRail.sync());
+  }
+  homeRail.sync = sync;
+  sync();
 }
 
 /* ======================= инструкция ======================= */

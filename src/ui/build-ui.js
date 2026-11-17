@@ -17,7 +17,9 @@ function renderSummary() {
     ['Язык клиента', p.lang || 'rus'],
     ['Диалогов изменено', layout],
     ['Портрет', pt && pt.enabled ? `${pt.size}×${pt.size}, камера ${pt.maleDist}` : 'не меняем'],
-    ['Шрифт', p.font.enabled && p.font.file ? p.font.file.split(/[\\/]/).pop() : 'не меняем'],
+    ['Шрифт', p.font.enabled && p.font.builtin ? `готовый: ${p.font.builtin}`
+      : p.font.enabled && p.font.file ? p.font.file.split(/[\\/]/).pop()
+        : p.theme === 'nightcity' ? 'Fira Sans Condensed (тестовый вариант)' : 'не меняем'],
     ['Иконок умений', skFamilyCount(p.packs && p.packs.skills)],
     ['Иконок предметов', Object.keys((p.packs && p.packs.items) || {}).length],
     ['Стиль интерфейса', p.look
@@ -33,6 +35,7 @@ function renderSummary() {
       ? `конструктор (${p.hitnum.staged === hnSig(hnState()) ? 'подготовлено' : 'подготовлю при сборке'})`
       : count('hitnum')],
     ['Картинок интерфейса', count('uiatlas')],
+    ['Тестовый вариант', p.theme === 'nightcity' ? 'Night City — перерисованные атласы и шрифт' : 'нет'],
     ['Вид Aion 5.x', p.v5 && p.v5.enabled ? 'включён' : 'не меняем'],
     ['Вид официального Classic', classicSummary(p.classic)],
     ['Окна HUD официального Classic', p.classic && p.classic.hud && p.classic.hud.enabled && p.classic.root

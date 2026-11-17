@@ -23,6 +23,8 @@ const usermaps = require('./usermaps');
 const running = require('./running');
 const { PACKS, BUILDER_PAK } = require('./client');
 const look = require('./look');
+const theme = require('./theme');
+const fonts = require('./fonts');
 const radar = require('./radar');
 const calib = require('./calib');
 const arrange = require('./arrange');
@@ -534,16 +536,29 @@ function apply(client, profile, log, opts) {
   }
 
   // --- шрифт -------------------------------------------------------------
-  const font = profile.font;
-  if (!dry && font && font.enabled && font.file) {
+  // свой файл, готовый шрифт программы или шрифт темы (fonts.resolve)
+  const font = fonts.resolve(profile, theme.resolve(profile));
+  if (!dry && font) {
     if (!fs.existsSync(font.file)) throw new Error('нет файла шрифта: ' + font.file);
     const ttf = fs.readFileSync(font.file);
     const files = new Map(FONT_NAMES.map((n) => [n, ttf]));
-    for (const l of font.langs && font.langs.length ? font.langs : client.languages()) {
+    const langs = font.langs && font.langs.length ? font.langs : client.languages();
+    for (const l of langs) {
       const out = client.fontPakPath(l);
       pak.writePak(out, files);
-      say(`шрифт: ${path.basename(font.file)} -> ${path.relative(client.root, out)}`);
+      say(`шрифт: ${font.label} -> ${path.relative(client.root, out)}`);
       report.files++;
+    }
+    // языки, с которых шрифт сняли, возвращаем к штатному
+    for (const l of client.languages()) {
+      const f = client.fontPakPath(l);
+      if (!langs.includes(l) && fs.existsSync(f)) { fs.unlinkSync(f); say(`шрифт: ${l} — штатный`); }
+    }
+  } else if (!dry) {
+    // шрифт выключен — пак шрифта программы убираем, игра берёт штатный
+    for (const l of client.languages()) {
+      const f = client.fontPakPath(l);
+      if (fs.existsSync(f)) { fs.unlinkSync(f); say(`шрифт выключен — убран ${path.relative(client.root, f)}`); }
     }
   }
 
@@ -568,6 +583,22 @@ function apply(client, profile, log, opts) {
     if (!changes.size) continue;
     const n = client.packStage(packId, lang, changes, byRel);
     say(`${client.pack(packId).title}: готово к записи ${n} из ${changes.size}`);
+  }
+
+  // --- тема: перекраска штатных атласов v4_* целиком ----------------------
+  // В тот же byRel, что и «Картинки интерфейса»; где у пользователя своя
+  // картинка, атлас не трогаем. Тема выключена — паки вернёт проход ниже.
+  const th = theme.resolve(profile);
+  if (th) {
+    if (!client.hasPack('uiatlas', lang)) say(`тема ${th.title}: атласов интерфейса в клиенте нет`);
+    else {
+      const mine = new Set(Object.keys((profile.packs && profile.packs.uiatlas) || {}));
+      const r = theme.stage(client, lang, th, mine);
+      const n = client.packStage('uiatlas', lang, r.atlases, byRel);
+      say(`тема ${th.title}: ${th.redraw ? 'перерисовано' : 'перекрашено'} атласов ${n}` +
+        (r.failed.length ? ` — не разобраны: ${r.failed.join(', ')}` : '') +
+        (mix.classic ? ' (детали, взятые у официального Classic, тема не красит)' : ''));
+    }
   }
 
   // --- перекрашенные карты официального клиента ----------------------------

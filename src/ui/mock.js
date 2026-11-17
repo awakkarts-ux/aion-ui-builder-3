@@ -340,7 +340,18 @@ if (!window.api) {
       run: async () => ({ restored: ['data/ui/game/game.pak'], removed: ['textures/ui/zz_aion2.pak'] }),
       undo: async () => [],
     },
-    font: { pick: async () => 'C:\\demo\\AccidentalPresidency-Ru.ttf' },
+    font: {
+      pick: async () => 'C:\\demo\\AccidentalPresidency-Ru.ttf',
+      builtin: async () => [
+        ['fira-cond', 'Fira Sans Condensed', 'узкий, как в Night City', 'FiraSansCondensed-Medium.ttf'],
+        ['roboto-cond', 'Roboto Condensed', 'узкий, нейтральный', 'RobotoCondensed-Medium.ttf'],
+        ['oswald', 'Oswald', 'плакатный, очень узкий', 'Oswald-Medium.ttf'],
+        ['exo2', 'Exo 2', 'технический, фантастика', 'Exo2-SemiBold.ttf'],
+        ['rubik', 'Rubik', 'мягкий, круглый', 'Rubik-Medium.ttf'],
+        ['russo', 'Russo One', 'жирный, игровой', 'RussoOne-Regular.ttf'],
+        ['play', 'Play', 'квадратный, плотный', 'Play-Bold.ttf'],
+      ].map(([id, title, note, file]) => ({ id, title, note, url: 'fonts/game/' + file })),
+    },
     packs: {
       info: async () => [
         { id: 'skills', title: 'Иконки умений', rel: 'data/skills/skills.pak', size: 64, present: true },

@@ -72,8 +72,16 @@
 
     <main class="stage">
       <section class="view is-active" data-view="home">
-        <h1>С чего начать</h1>
-        <p class="lede">Выберите основу вида и изучите, что меняет каждый раздел программы.</p>
+        <div class="home__head">
+          <div>
+            <h1>С чего начать</h1>
+            <p class="lede">Выберите основу вида или тестовый вариант и изучите, что меняет каждый раздел программы.</p>
+          </div>
+          <div class="home__pager" id="home-pager">
+            <button class="home__arrow" id="home-prev" aria-label="Назад"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5 5.5 8l4.5 4.5"/></svg></button>
+            <button class="home__arrow" id="home-next" aria-label="Дальше"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5 10.5 8 6 12.5"/></svg></button>
+          </div>
+        </div>
         <div class="home__grid" id="home-grid"></div>
         <div class="home__note" id="home-note"></div>
       </section>
@@ -238,8 +246,13 @@
           Подменяем все три одним файлом; азиатская <code>CHU_2002.ttf</code> остаётся штатной,
           иначе пропадут иероглифы.</p>
         <div class="card">
+          <div class="fnt__head"><b>Готовые шрифты</b><span class="muted">с кириллицей, свободная лицензия OFL — нажмите, чтобы выбрать</span></div>
+          <div class="fnt" id="font-builtin"></div>
+          <p class="fnt__note" id="font-theme-note" hidden></p>
+        </div>
+        <div class="card">
           <div class="row">
-            <label>Файл .ttf</label>
+            <label>Свой файл</label>
             <input type="text" id="font-path" readonly placeholder="не выбран" />
             <button class="btn" id="font-pick">Выбрать…</button>
           </div>

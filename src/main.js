@@ -27,6 +27,8 @@ const scenelib = require('./core/scene');
 const presetlib = require('./core/presets');
 const usermaps = require('./core/usermaps');
 const itemicons = require('./core/itemicons');
+const theme = require('./core/theme');
+const fonts = require('./core/fonts');
 const { relativePath, assertImage, assertRgbaBytes, safeFileName } = require('./core/safe');
 const { Client, PAKS, PACKS } = require('./core/client');
 
@@ -630,8 +632,9 @@ ipcMain.handle('editor:atlas', (_e, texture) => {
 // шрифт текста на экране: свой из раздела «Шрифт» (игра подменяет им три
 // гарнитуры), иначе родной из пака локали
 ipcMain.handle('editor:font', (_e, face) => {
-  const font = readJson(profilePath(), {}).font || {};
-  const own = font.enabled && font.file && fs.existsSync(font.file) &&
+  const prof = readJson(profilePath(), {});
+  const font = fonts.resolve(prof, theme.resolve(prof));
+  const own = font && fs.existsSync(font.file) &&
     build.FONT_NAMES.some((n) => n.replace(/\.[^.]+$/, '').toLowerCase() === String(face).toLowerCase());
   return own ? fs.readFileSync(font.file) : needScene().scene.fontFile(face);
 });
@@ -1000,6 +1003,8 @@ ipcMain.handle('portrait:presets', () => ({
 ipcMain.handle('portrait:fromPreset', (_e, id) => portrait.fromPreset(id));
 
 // ---- шрифт ---------------------------------------------------------------
+
+ipcMain.handle('font:builtin', () => fonts.list());
 
 ipcMain.handle('font:pick', async () => {
   const r = await dialog.showOpenDialog(win, {

@@ -1221,28 +1221,81 @@ function renderFontLangs() {
   });
 }
 
+/** Готовые шрифты программы (core/fonts.js): id, название, путь для окна. */
+let fontBuiltin = [];
+
+function renderFontBuiltin() {
+  const f = state.profile.font;
+  const box = $('#font-builtin');
+  // у каждой карточки свой @font-face — образец её же шрифтом
+  let faces = document.getElementById('font-builtin-faces');
+  if (!faces) {
+    faces = document.createElement('style');
+    faces.id = 'font-builtin-faces';
+    document.head.appendChild(faces);
+  }
+  faces.textContent = fontBuiltin.map((x) =>
+    `@font-face { font-family: 'aion-b-${x.id}'; src: url("${x.url}"); }`).join('\n');
+  box.innerHTML = fontBuiltin.map((x) => {
+    const on = f.enabled && f.builtin === x.id;
+    return `<button class="fnt__it${on ? ' is-on' : ''}" data-id="${x.id}" style="font-family:'aion-b-${x.id}', var(--font)">` +
+      `<i>Абевега 1234</i><small style="font-family:var(--font)"><b>${esc(x.title)}</b>${esc(x.note)}</small></button>`;
+  }).join('');
+  box.querySelectorAll('.fnt__it').forEach((b) => {
+    b.onclick = () => {
+      const same = f.enabled && f.builtin === b.dataset.id;
+      if (same) { f.enabled = false; } else { f.builtin = b.dataset.id; f.enabled = true; }
+      renderFont();
+      renderBadges();
+      saveProfile();
+    };
+  });
+  const note = $('#font-theme-note');
+  const th = state.profile.theme === 'nightcity' && !f.enabled;
+  note.hidden = !th;
+  if (th) note.textContent = 'Сейчас шрифт даёт тестовый вариант Night City — Fira Sans Condensed. Выберите другой, чтобы заменить.';
+}
+
+/** Раздел целиком по профилю: готовый шрифт, свой файл, галочка, образец. */
+function renderFont() {
+  const f = state.profile.font;
+  const b = f.builtin && fontBuiltin.find((x) => x.id === f.builtin);
+  $('#font-path').value = b ? '' : f.file || '';
+  $('#font-path').placeholder = b ? `готовый: ${b.title}` : 'не выбран';
+  $('#font-on').checked = !!f.enabled;
+  if (b) applyFontPreview(null, b.url);
+  else if (f.file) applyFontPreview(f.file);
+  else if (state.profile.theme === 'nightcity') applyFontPreview(null, 'fonts/game/FiraSansCondensed-Medium.ttf');
+  renderFontBuiltin();
+}
+
+(async () => {
+  try { fontBuiltin = (window.api.font.builtin && await window.api.font.builtin()) || []; } catch (e) { fontBuiltin = []; }
+  if (state.profile) renderFont();
+})();
+
 $('#font-pick').onclick = () =>
   guard(async () => {
     const f = await window.api.font.pick();
     if (!f) return;
     state.profile.font.file = f;
+    delete state.profile.font.builtin;
     state.profile.font.enabled = true;
-    $('#font-path').value = f;
-    $('#font-on').checked = true;
-    applyFontPreview(f);
+    renderFont();
     renderBadges();
     saveProfile();
   });
 
 $('#font-on').onchange = (e) => {
   state.profile.font.enabled = e.target.checked;
+  renderFont();
   renderBadges();
   saveProfile();
 };
 
-function applyFontPreview(file) {
-  if (!file) return;
-  const url = 'file:///' + file.replace(/\\/g, '/').replace(/^\/+/, '');
+function applyFontPreview(file, rel) {
+  if (!file && !rel) return;
+  const url = rel || 'file:///' + file.replace(/\\/g, '/').replace(/^\/+/, '');
   const style = document.getElementById('font-face') || document.createElement('style');
   style.id = 'font-face';
   style.textContent = `@font-face { font-family: 'aion-pick'; src: url("${url}"); }
@@ -1733,9 +1786,7 @@ $('#profile-clear').onclick = () => {
 };
 
 function afterProfileLoad() {
-  $('#font-path').value = state.profile.font.file || '';
-  $('#font-on').checked = !!state.profile.font.enabled;
-  applyFontPreview(state.profile.font.file);
+  renderFont();
   renderFontLangs();
   if (state.portraitStock) renderPortrait();
   renderList();
